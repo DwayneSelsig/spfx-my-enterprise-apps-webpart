@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "entra-enterprise-apps-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/entraEnterpriseApps/EntraEnterpriseAppsWebPart.js",
+          "manifest": "./src/webparts/entraEnterpriseApps/EntraEnterpriseAppsWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "EntraEnterpriseAppsWebPartStrings": "lib/webparts/entraEnterpriseApps/loc/{locale}.js"
+  }
+}

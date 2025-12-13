@@ -1,0 +1,19 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "useGulp": false,
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.21.1",
+    "sdksVersions": {},
+    "version": "1.22.0",
+    "libraryName": "spfx-entra-enterprise-apps",
+    "libraryId": "3843c6cd-b578-481f-b70e-0b6291c4c398",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "spfx-entra-enterprise-apps",
+    "solutionShortDescription": "spfx-entra-enterprise-apps description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}

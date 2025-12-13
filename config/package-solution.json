@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "spfx-entra-enterprise-apps-client-side-solution",
+    "id": "3843c6cd-b578-481f-b70e-0b6291c4c398",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.22.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "spfx-entra-enterprise-apps description"
+      },
+      "longDescription": {
+        "default": "spfx-entra-enterprise-apps description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "spfx-entra-enterprise-apps Feature",
+        "description": "The feature that activates elements of the spfx-entra-enterprise-apps solution.",
+        "id": "e77ae464-a525-4446-95b1-19110008f920",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/spfx-entra-enterprise-apps.sppkg"
+  }
+}
