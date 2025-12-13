@@ -27,9 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # -----------------------------
-      # VERSIONING
-      # -----------------------------
+      # VERSIONING (blijft OK, omdat package-solution.json "version": "*" gebruikt)
       - name: Extract version from release tag
         id: version
         run: |
@@ -37,24 +35,15 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Update package.json version
-        run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
-      # -----------------------------
-      # BUILD
-      # -----------------------------
-      - name: Heft build
-        run: npx heft build --clean
+      # BUILD (build omvat bundling in SPFx Heft toolchain)
+      - name: Heft build (production)
+        run: npx heft build --clean --production
 
-      - name: Heft bundle (production)
-        run: npx heft bundle --production
-
-      - name: Heft package solution
+      - name: Heft package solution (production)
         run: npx heft package-solution --production
 
-      # -----------------------------
-      # ATTACH TO RELEASE
-      # -----------------------------
       - name: Upload sppkg to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
