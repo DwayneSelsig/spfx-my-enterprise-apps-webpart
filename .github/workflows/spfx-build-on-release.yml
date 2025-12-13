@@ -40,12 +40,6 @@ jobs:
         run: |
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
-      - name: Update SPFx solution version
-        run: |
-          jq '.solution.version="${{ steps.version.outputs.version }}.0"' \
-            sharepoint/solution/package-solution.json > tmp.json \
-            && mv tmp.json sharepoint/solution/package-solution.json
-
       # -----------------------------
       # BUILD
       # -----------------------------
