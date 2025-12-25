@@ -35,6 +35,18 @@ The webpart can be configured through the property pane with the following optio
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
+## Solution
+
+| Solution    | Author(s)                                               |
+| ----------- | ------------------------------------------------------- |
+| spfx-my-enterprise-apps-webpart | Dwayne Selsig |
+
+## Version history
+
+| Version | Date             | Comments        |
+| ------- | ---------------- | --------------- |
+| 0.5.0.0 | Current          | Initial release |
+
 ## Used SharePoint Framework Version
 
 ![version](https://img.shields.io/badge/version-1.22.0-green.svg)
@@ -54,18 +66,6 @@ Additional requirements:
 - Node.js version 22.14.0 or higher (and lower than 23.0.0)
 - Appropriate Microsoft Graph permissions configured in the tenant
 - Access to a SharePoint site where the webpart can be deployed
-
-## Solution
-
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| spfx-my-enterprise-apps-webpart | Dwayne Selsig |
-
-## Version history
-
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 0.5.0.0 | Current          | Initial release |
 
 ## Disclaimer
 
