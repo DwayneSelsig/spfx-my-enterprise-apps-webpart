@@ -1,4 +1,4 @@
-# spfx-entra-enterprise-apps
+# spfx-my-enterprise-apps-webpart
 
 ## Summary
 
@@ -6,7 +6,34 @@ A SharePoint Framework webpart that displays enterprise applications from Micros
 
 ## Screenshot
 
-![Entra Enterprise Apps webpart in SharePoint (My Apps)](docs/images/My-apps-screenshot.png "Entra Enterprise Apps webpart in SharePoint (My Apps)")
+![My Enterprise Apps webpart in SharePoint](docs/images/My-apps-screenshot.png "My Enterprise Apps webpart in SharePoint")
+
+## Contributing
+
+We welcome contributions from the community! Here are some ways you can help:
+
+- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
+- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
+
+## Features
+
+The Entra Enterprise Apps webpart provides the following functionality:
+
+- Integration with Microsoft Graph API to retrieve enterprise applications
+- Configurable icon sizes (small, normal, large, huge)
+- Option to show or hide hidden applications
+- Display of Entra ID applications with custom sorting capabilities
+- Localization support (English and Dutch)
+- Custom property pane configuration for administrators
+
+## Configuration
+
+The webpart can be configured through the property pane with the following options:
+
+- **Title**: Custom title for the webpart
+- **Sort Order**: Enter app-name keywords (one per line) to prioritize apps matching those terms
+- **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
+- **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
 ## Used SharePoint Framework Version
 
@@ -60,41 +87,14 @@ Other build commands can be listed using `heft --help`.
 To build the solution for production:
 - `npm run build`
 
-## Features
-
-The Entra Enterprise Apps webpart provides the following functionality:
-
-This webpart illustrates the following concepts:
-
-- Integration with Microsoft Graph API to retrieve enterprise applications
-- Configurable icon sizes (small, normal, large, huge)
-- Option to show or hide hidden applications
-- Display of Entra ID applications with custom sorting capabilities
-- Localization support (English and Dutch)
-- Custom property pane configuration for administrators
-
-## Configuration
-
-The webpart can be configured through the property pane with the following options:
-
-- **Title**: Custom title for the webpart
-- **Sort Order**: Define a custom sort order for applications (supports comma-separated list)
-- **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
-- **Icon Size**: Choose from small, normal, large, or huge icon sizes
-
 ## Microsoft Graph Permissions
 
 This solution requires the following Microsoft Graph permissions:
 
 - `User.Read` - To read the current user's profile
-- `Application.Read.All` - To read all enterprise applications
-
-## Contributing
-
-We welcome contributions from the community! Here are some ways you can help:
-
-- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
-- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
+- `Application.Read.All` - To read all enterprise applications (requires admin consent)
+  
+`User.Read` is covered by basic sign-in/profile consent; `Application.Read.All` must be approved by a tenant admin via the API access page or enterprise app consent.
 
 ## References
 
