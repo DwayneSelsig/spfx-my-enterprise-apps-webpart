@@ -1,0 +1,289 @@
+@import '~@fluentui/react/dist/sass/References.scss';
+
+.myEnterpriseApps {
+  padding: 15px;
+
+  // Teams context styling
+  &.teams {
+    font-family: $ms-font-family-fallbacks;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+  }
+
+  .titleLink {
+    color: inherit;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: none;
+      opacity: 0.8;
+    }
+  }
+
+  .allAppsLink {
+    color: "[theme:link, default:#0078d4]";
+    color: var(--link);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+      color: "[theme:linkHovered, default:#004578]";
+      color: var(--linkHovered);
+    }
+  }
+
+  .appsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .appItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: "[theme:neutralLighter, default:#f3f2f1]";
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      width: 100%;
+
+      &:hover {
+        text-decoration: none;
+      }
+    }
+  }
+
+  .hiddenApp {
+    opacity: 0.3;
+  }
+
+  // Icon sizes - Normal (default)
+  .appIcon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+
+    img, svg {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+  }
+
+  .appName {
+    font-size: 11px;
+    color: "[theme:bodyText, default:#323130]";
+    color: var(--bodyText);
+    word-break: break-word;
+    line-height: 1.3;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  // Icon size: Small
+  &.sizeSmall {
+    .appsList {
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 8px;
+    }
+
+    .appItem {
+      padding: 6px;
+    }
+
+    .appIcon {
+      width: 32px;
+      height: 32px;
+      margin-bottom: 4px;
+    }
+
+    .appName {
+      font-size: 9px;
+    }
+
+    .skeletonIcon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .skeletonText {
+      height: 10px;
+    }
+  }
+
+  // Icon size: Normal (default)
+  &.sizeNormal {
+    .appIcon {
+      width: 48px;
+      height: 48px;
+    }
+
+    .appName {
+      font-size: 11px;
+    }
+
+    .skeletonIcon {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  // Icon size: Large
+  &.sizeLarge {
+    .appsList {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 14px;
+    }
+
+    .appItem {
+      padding: 10px;
+    }
+
+    .appIcon {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 8px;
+    }
+
+    .appName {
+      font-size: 12px;
+    }
+
+    .skeletonIcon {
+      width: 60px;
+      height: 60px;
+    }
+
+    .skeletonText {
+      height: 14px;
+    }
+  }
+
+  // Icon size: Huge
+  &.sizeHuge {
+    .appsList {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 16px;
+    }
+
+    .appItem {
+      padding: 12px;
+    }
+
+    .appIcon {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 10px;
+    }
+
+    .appName {
+      font-size: 14px;
+    }
+
+    .skeletonIcon {
+      width: 80px;
+      height: 80px;
+    }
+
+    .skeletonText {
+      height: 16px;
+    }
+  }
+
+  // Skeleton loading styles
+  .skeleton {
+    pointer-events: none;
+    
+    &:hover {
+      background-color: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+
+  .skeletonIcon,
+  .skeletonText {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  .skeletonIcon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .skeletonText {
+    width: 70%;
+    height: 12px;
+    margin-top: 6px;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  // Error message styling
+  .errorMessage {
+    padding: 20px;
+    text-align: center;
+    color: "[theme:errorText, default:#a4262c]";
+    background-color: "[theme:errorBackground, default:#fde7e9]";
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+
+  .noAppsMessage {
+    padding: 40px;
+    text-align: center;
+    color: "[theme:bodySubtext, default:#605e5c]";
+    font-size: 14px;
+  }
+}

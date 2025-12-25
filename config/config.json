@@ -2,17 +2,17 @@
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
   "version": "2.0",
   "bundles": {
-    "entra-enterprise-apps-web-part": {
+    "my-enterprise-apps-web-part": {
       "components": [
         {
-          "entrypoint": "./lib/webparts/entraEnterpriseApps/EntraEnterpriseAppsWebPart.js",
-          "manifest": "./src/webparts/entraEnterpriseApps/EntraEnterpriseAppsWebPart.manifest.json"
+          "entrypoint": "./lib/webparts/myEnterpriseApps/MyEnterpriseAppsWebPart.js",
+          "manifest": "./src/webparts/myEnterpriseApps/MyEnterpriseAppsWebPart.manifest.json"
         }
       ]
     }
   },
   "externals": {},
   "localizedResources": {
-    "EntraEnterpriseAppsWebPartStrings": "lib/webparts/entraEnterpriseApps/loc/{locale}.js"
+    "MyEnterpriseAppsWebPartStrings": "lib/webparts/myEnterpriseApps/loc/{locale}.js"
   }
 }

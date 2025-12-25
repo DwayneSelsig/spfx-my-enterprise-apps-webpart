@@ -1,7 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
   "solution": {
-    "name": "spfx-entra-enterprise-apps-client-side-solution",
+    "name": "spfx-my-enterprise-apps-client-side-solution",
+    "title": "My Enterprise Apps",
     "id": "3843c6cd-b578-481f-b70e-0b6291c4c398",
     "version": "1.0.0.0",
     "includeClientSideAssets": true,
@@ -14,12 +15,22 @@
       "termsOfUseUrl": "",
       "mpnId": "Undefined-1.22.0"
     },
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "User.Read"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Application.Read.All"
+      }
+    ],
     "metadata": {
       "shortDescription": {
-        "default": "spfx-entra-enterprise-apps description"
+        "default": "Displays enterprise applications the user has access to"
       },
       "longDescription": {
-        "default": "spfx-entra-enterprise-apps description"
+        "default": "A SharePoint Framework webpart that displays enterprise applications that the current user has access to. Features include custom sorting, icon size options, and the ability to show or hide hidden apps."
       },
       "screenshotPaths": [],
       "videoUrl": "",
@@ -27,14 +38,14 @@
     },
     "features": [
       {
-        "title": "spfx-entra-enterprise-apps Feature",
-        "description": "The feature that activates elements of the spfx-entra-enterprise-apps solution.",
+        "title": "My Enterprise Apps Feature",
+        "description": "The feature that activates the My Enterprise Apps webpart.",
         "id": "e77ae464-a525-4446-95b1-19110008f920",
         "version": "1.0.0.0"
       }
     ]
   },
   "paths": {
-    "zippedPackage": "solution/spfx-entra-enterprise-apps.sppkg"
+    "zippedPackage": "solution/spfx-my-enterprise-apps.sppkg"
   }
 }

@@ -2,9 +2,11 @@
 
 ## Summary
 
-Short summary on functionality and used technologies.
+A SharePoint Framework webpart that displays enterprise applications from Microsoft Entra ID (formerly Azure AD) that the current user has access to. This solution leverages the Microsoft Graph API to dynamically retrieve and display Entra enterprise apps with customizable sorting, icon sizes, and the ability to show or hide hidden applications.
 
-[picture of the solution in action, if possible]
+## Screenshot
+
+![Entra Enterprise Apps webpart in SharePoint (My Apps)](docs/images/My-apps-screenshot.png "Entra Enterprise Apps webpart in SharePoint (My Apps)")
 
 ## Used SharePoint Framework Version
 
@@ -19,20 +21,24 @@ Short summary on functionality and used technologies.
 
 ## Prerequisites
 
-> Any special pre-requisites?
+Before getting started, ensure your development environment is properly set up by following the [SharePoint Framework development environment setup guide](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-development-environment).
+
+Additional requirements:
+- Node.js version 22.14.0 or higher (and lower than 23.0.0)
+- Appropriate Microsoft Graph permissions configured in the tenant
+- Access to a SharePoint site where the webpart can be deployed
 
 ## Solution
 
 | Solution    | Author(s)                                               |
 | ----------- | ------------------------------------------------------- |
-| folder name | Author details (name, company, twitter alias with link) |
+| spfx-my-enterprise-apps-webpart | Dwayne Selsig |
 
 ## Version history
 
 | Version | Date             | Comments        |
 | ------- | ---------------- | --------------- |
-| 1.1     | March 10, 2021   | Update comment  |
-| 1.0     | January 29, 2021 | Initial release |
+| 0.5.0.0 | Current          | Initial release |
 
 ## Disclaimer
 
@@ -44,34 +50,58 @@ Short summary on functionality and used technologies.
 
 - Clone this repository
 - Ensure that you are at the solution folder
-- in the command-line run:
-  - `npm install -g @rushstack/heft`
+- In the command-line run:
+  - `npm install @rushstack/heft --global`
   - `npm install`
   - `heft start`
 
-> Include any additional steps as needed.
-
 Other build commands can be listed using `heft --help`.
+
+To build the solution for production:
+- `npm run build`
 
 ## Features
 
-Description of the extension that expands upon high-level summary above.
+The Entra Enterprise Apps webpart provides the following functionality:
 
-This extension illustrates the following concepts:
+This webpart illustrates the following concepts:
 
-- topic 1
-- topic 2
-- topic 3
+- Integration with Microsoft Graph API to retrieve enterprise applications
+- Configurable icon sizes (small, normal, large, huge)
+- Option to show or hide hidden applications
+- Display of Entra ID applications with custom sorting capabilities
+- Localization support (English and Dutch)
+- Custom property pane configuration for administrators
 
-> Notice that better pictures and documentation will increase the sample usage and the value you are providing for others. Thanks for your submissions advance.
+## Configuration
 
-> Share your web part with others through Microsoft 365 Patterns and Practices program to get visibility and exposure. More details on the community, open-source projects and other activities from http://aka.ms/m365pnp.
+The webpart can be configured through the property pane with the following options:
+
+- **Title**: Custom title for the webpart
+- **Sort Order**: Define a custom sort order for applications (supports comma-separated list)
+- **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
+- **Icon Size**: Choose from small, normal, large, or huge icon sizes
+
+## Microsoft Graph Permissions
+
+This solution requires the following Microsoft Graph permissions:
+
+- `User.Read` - To read the current user's profile
+- `Application.Read.All` - To read all enterprise applications
+
+## Contributing
+
+We welcome contributions from the community! Here are some ways you can help:
+
+- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
+- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
 
 ## References
 
 - [Getting started with SharePoint Framework](https://docs.microsoft.com/sharepoint/dev/spfx/set-up-your-developer-tenant)
-- [Building for Microsoft teams](https://docs.microsoft.com/sharepoint/dev/spfx/build-for-teams-overview)
+- [Building for Microsoft Teams](https://docs.microsoft.com/sharepoint/dev/spfx/build-for-teams-overview)
 - [Use Microsoft Graph in your solution](https://docs.microsoft.com/sharepoint/dev/spfx/web-parts/get-started/using-microsoft-graph-apis)
 - [Publish SharePoint Framework applications to the Marketplace](https://docs.microsoft.com/sharepoint/dev/spfx/publish-to-marketplace-overview)
 - [Microsoft 365 Patterns and Practices](https://aka.ms/m365pnp) - Guidance, tooling, samples and open-source controls for your Microsoft 365 development
 - [Heft Documentation](https://heft.rushstack.io/)
+- [Microsoft Entra ID Documentation](https://learn.microsoft.com/en-us/entra/)
