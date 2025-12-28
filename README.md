@@ -35,6 +35,19 @@ The webpart can be configured through the property pane with the following optio
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
+## Installation and Upgrades
+
+### Download or compile
+[Download the latest release](https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/releases) or compile the solution (`npm run build`). The `.sppkg` file will be in `sharepoint/solution/`.
+
+### Installation
+Go to the [SharePoint admin center → **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) → **Apps** → **Open** → **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
+
+### Upgrades
+Upload the new `.sppkg` file and overwrite the existing one when prompted.
+
+> **Note:** SharePoint add-ins are being retired, but SharePoint Framework (SPFx) solutions like this one are not affected and remain fully supported.
+
 ## Solution
 
 | Solution    | Author(s)                                               |
