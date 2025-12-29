@@ -8,13 +8,6 @@ A SharePoint Framework webpart that displays enterprise applications from Micros
 
 ![My Enterprise Apps webpart in SharePoint](docs/images/My-apps-screenshot.png "My Enterprise Apps webpart in SharePoint")
 
-## Contributing
-
-We welcome contributions from the community! Here are some ways you can help:
-
-- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
-- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
-
 ## Features
 
 The Entra Enterprise Apps webpart provides the following functionality:
@@ -47,6 +40,13 @@ Go to the [SharePoint admin center → **More features**](https://go.microsoft.c
 Upload the new `.sppkg` file and overwrite the existing one when prompted.
 
 > **Note:** SharePoint add-ins are being retired, but SharePoint Framework (SPFx) solutions like this one are not affected and remain fully supported.
+
+## Contributing
+
+We welcome contributions from the community! Here are some ways you can help:
+
+- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
+- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
 
 ## Solution
 
