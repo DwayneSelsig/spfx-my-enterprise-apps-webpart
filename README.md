@@ -58,7 +58,8 @@ We welcome contributions from the community! Here are some ways you can help:
 
 | Version | Date             | Comments        |
 | ------- | ---------------- | --------------- |
-| 0.5.0.0 | Current          | Initial release |
+| 0.5.0.0 | 2025-12-25          | Initial release |
+| 0.6.0.0 | 2026-01-01          | Added Microsoft Apps |
 
 ## Used SharePoint Framework Version
 
