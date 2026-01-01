@@ -1,4 +1,4 @@
-# ![icon](docs/images/icon.svg) My Enterprise Apps
+# <picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/icon-dark.svg"><img src="docs/images/icon.svg" alt="icon" width="32" height="32"></picture> My Enterprise Apps
 
 ## Summary
 
