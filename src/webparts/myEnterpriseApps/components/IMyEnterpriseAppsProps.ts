@@ -7,6 +7,7 @@ export interface IMyEnterpriseAppsProps {
   title: string;
   sortOrder: string;
   showHiddenApps: boolean;
+  showDefaultApps: boolean;
   iconSize: 'small' | 'normal' | 'large' | 'huge';
   hasTeamsContext: boolean;
   graphClient: MSGraphClientV3;
@@ -53,4 +54,5 @@ export interface IAppData {
   resourceId: string;
   isHidden: boolean;
   isLoaded: boolean;
+  isDefaultApp?: boolean;
 }

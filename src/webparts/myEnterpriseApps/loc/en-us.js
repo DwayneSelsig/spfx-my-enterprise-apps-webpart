@@ -6,6 +6,7 @@ define([], function() {
     "SortOrderFieldLabel": "Sort Order",
     "SortOrderFieldDescription": "Enter app name keywords (one per line) to prioritize. Apps matching these terms will appear first in the specified order.",
     "ShowHiddenAppsLabel": "Show hidden apps (semi-transparent)",
+    "ShowDefaultAppsLabel": "Show default apps",
     "IconSizeFieldLabel": "Icon Size",
     "IconSizeSmall": "Small",
     "IconSizeNormal": "Normal",

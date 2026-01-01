@@ -6,6 +6,7 @@ define([], function() {
     "SortOrderFieldLabel": "Sorteervolgorde",
     "SortOrderFieldDescription": "Voer trefwoorden voor app-namen in (één per regel) om prioriteit te geven. Apps die overeenkomen met deze termen verschijnen eerst in de opgegeven volgorde.",
     "ShowHiddenAppsLabel": "Toon verborgen apps (semi-transparant)",
+    "ShowDefaultAppsLabel": "Toon standaardapps",
     "IconSizeFieldLabel": "Pictogramgrootte",
     "IconSizeSmall": "Klein",
     "IconSizeNormal": "Normaal",

@@ -1,12 +1,13 @@
 import * as React from 'react';
 import styles from './MyEnterpriseApps.module.scss';
-import type { 
-  IMyEnterpriseAppsProps, 
-  IMyEnterpriseAppsState, 
-  IAppData, 
-  IAppRoleAssignment, 
-  IServicePrincipalInfo 
+import type {
+  IMyEnterpriseAppsProps,
+  IMyEnterpriseAppsState,
+  IAppData,
+  IAppRoleAssignment,
+  IServicePrincipalInfo
 } from './IMyEnterpriseAppsProps';
+import { defaultApps } from '../assets/DefaultApps';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
 
 export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsProps, IMyEnterpriseAppsState> {
@@ -29,8 +30,9 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
   public componentDidUpdate(prevProps: IMyEnterpriseAppsProps): void {
     // Reload if sort order or showHiddenApps changes
-    if (prevProps.sortOrder !== this.props.sortOrder || 
-        prevProps.showHiddenApps !== this.props.showHiddenApps) {
+    if (prevProps.sortOrder !== this.props.sortOrder ||
+        prevProps.showHiddenApps !== this.props.showHiddenApps ||
+        prevProps.showDefaultApps !== this.props.showDefaultApps) {
       this.loadApps().catch(error => {
         console.error('Error loading apps:', error);
         this.setState({ error: error.message, isLoading: false });
@@ -64,6 +66,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='8' fill='%230078d4'/%3E%3Ctext x='24' y='32' text-anchor='middle' fill='white' font-size='22' font-family='Segoe UI, sans-serif' font-weight='600'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
   }
 
+  private normalizeName(name: string): string {
+    return (name || '').trim().toLowerCase();
+  }
+
   /**
    * Load apps from Microsoft Graph API
    */
@@ -76,27 +82,53 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         .api('/me/appRoleAssignments')
         .get();
 
-      const assignments: IAppRoleAssignment[] = response.value;
+      const assignments: IAppRoleAssignment[] = response.value || [];
 
-      if (!assignments || assignments.length === 0) {
-        this.setState({ apps: [], isLoading: false });
-        return;
-      }
-
-      // Build a Map with all apps
+      // Build a Map with all apps (keyed by normalized name)
       const allAppsMap = new Map<string, IAppData>();
       
       assignments.forEach(assignment => {
         const defaultIcon = this.generateDefaultIcon(assignment.resourceDisplayName);
-        allAppsMap.set(assignment.resourceDisplayName, {
+        const key = this.normalizeName(assignment.resourceDisplayName);
+        allAppsMap.set(key, {
           name: assignment.resourceDisplayName,
           url: '',
           iconUrl: defaultIcon,
           resourceId: assignment.resourceId,
           isHidden: false,
-          isLoaded: false
+          isLoaded: false,
+          isDefaultApp: false
         });
       });
+
+      const includeDefaults = this.props.showDefaultApps ?? true;
+
+      if (includeDefaults) {
+        defaultApps.forEach(defaultApp => {
+          const key = this.normalizeName(defaultApp.name);
+          const existing = allAppsMap.get(key);
+          const merged: IAppData = {
+            name: defaultApp.name,
+            url: defaultApp.url,
+            iconUrl: defaultApp.icon,
+            resourceId: existing?.resourceId || '',
+            isHidden: existing?.isHidden ?? false,
+            isLoaded: existing ? existing.isLoaded : true,
+            isDefaultApp: true
+          };
+
+          if (existing) {
+            allAppsMap.set(key, { ...existing, ...merged });
+          } else {
+            allAppsMap.set(key, merged);
+          }
+        });
+      }
+
+      if (allAppsMap.size === 0) {
+        this.setState({ apps: [], isLoading: false });
+        return;
+      }
 
       // Sort apps according to custom logic
       const appsArray = this.sortApps(allAppsMap);
@@ -185,6 +217,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
     const loadPromises = apps.map(async (app) => {
       try {
+        if (!app.resourceId) {
+          return { ...app, isLoaded: true } as IAppData;
+        }
+
         const spInfo: IServicePrincipalInfo = await graphClient
           .api(`/servicePrincipals/${app.resourceId}`)
           .select('appId,appOwnerOrganizationId,info,tags')
@@ -199,7 +235,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         // Update app data
         return {
           ...app,
-          url: loginUrl,
+          url: app.isDefaultApp ? app.url : loginUrl,
           iconUrl: spInfo.info?.logoUrl || app.iconUrl,
           isHidden: hasHideAppTag === true,
           isLoaded: true
@@ -211,11 +247,18 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     });
 
     const results = await Promise.all(loadPromises);
+
+    // Deduplicate by normalized name to avoid double-defaults during rapid refreshes
+    const uniqueByName = new Map<string, IAppData>();
+    results.forEach(app => {
+      uniqueByName.set(this.normalizeName(app.name), app);
+    });
+    const dedupedApps = Array.from(uniqueByName.values());
     
     // Filter apps based on showHiddenApps setting
     const filteredApps = showHiddenApps 
-      ? results 
-      : results.filter(app => !app.isHidden);
+      ? dedupedApps 
+      : dedupedApps.filter(app => !app.isHidden);
 
     this.setState({ apps: filteredApps });
   }
@@ -253,7 +296,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
     return (
       <div 
-        key={app.resourceId} 
+        key={app.resourceId || app.name} 
         className={appClasses}
         data-resource-id={app.resourceId}
         data-app-name={app.name}

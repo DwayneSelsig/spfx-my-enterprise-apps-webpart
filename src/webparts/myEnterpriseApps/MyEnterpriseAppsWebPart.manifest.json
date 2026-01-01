@@ -21,6 +21,7 @@
       "title": "",
       "sortOrder": "",
       "showHiddenApps": false,
+      "showDefaultApps": true,
       "iconSize": "normal"
     }
   }]

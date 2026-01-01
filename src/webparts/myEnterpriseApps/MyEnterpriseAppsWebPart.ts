@@ -21,6 +21,7 @@ export interface IMyEnterpriseAppsWebPartProps {
   title: string;
   sortOrder: string;
   showHiddenApps: boolean;
+  showDefaultApps: boolean;
   iconSize: 'small' | 'normal' | 'large' | 'huge';
 }
 
@@ -34,6 +35,7 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         title: this.properties.title,
         sortOrder: this.properties.sortOrder,
         showHiddenApps: this.properties.showHiddenApps,
+        showDefaultApps: this.properties.showDefaultApps,
         iconSize: this.properties.iconSize || 'normal',
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
         graphClient: this.graphClient
@@ -79,6 +81,9 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   description: strings.SortOrderFieldDescription,
                   multiline: true,
                   rows: 5
+                }),
+                PropertyPaneCheckbox('showDefaultApps', {
+                  text: strings.ShowDefaultAppsLabel
                 }),
                 PropertyPaneCheckbox('showHiddenApps', {
                   text: strings.ShowHiddenAppsLabel

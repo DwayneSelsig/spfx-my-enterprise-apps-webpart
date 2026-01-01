@@ -5,6 +5,7 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   SortOrderFieldLabel: string;
   SortOrderFieldDescription: string;
   ShowHiddenAppsLabel: string;
+  ShowDefaultAppsLabel: string;
   IconSizeFieldLabel: string;
   IconSizeSmall: string;
   IconSizeNormal: string;
