@@ -67,10 +67,11 @@ We welcome contributions from the community! Here are some ways you can help:
 | ------- | ---------------- | --------------- |
 | 0.5.0.0 | 2025-12-25          | Initial release |
 | 0.6.0.0 | 2026-01-01          | Added Microsoft Apps |
+| 0.6.1.0 | 2026-05-25       | Upgraded to SPFx 1.23.0 |
 
 ## Used SharePoint Framework Version
 
-![version](https://img.shields.io/badge/version-1.22.0-green.svg)
+![version](https://img.shields.io/badge/version-1.23.0-green.svg)
 
 ## Applies to
 
@@ -101,7 +102,7 @@ Additional requirements:
 - In the command-line run:
   - `npm install @rushstack/heft --global`
   - `npm install`
-  - `heft start`
+  - `npm run start`
 
 Other build commands can be listed using `heft --help`.
 

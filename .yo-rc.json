@@ -5,7 +5,7 @@
     "isCreatingSolution": true,
     "nodeVersion": "22.21.1",
     "sdksVersions": {},
-    "version": "1.22.0",
+    "version": "1.23.0",
     "libraryName": "spfx-entra-enterprise-apps",
     "libraryId": "3843c6cd-b578-481f-b70e-0b6291c4c398",
     "environment": "spo",
