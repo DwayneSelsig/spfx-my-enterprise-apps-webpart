@@ -41,24 +41,6 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   }
 
   /**
-   * Get the CSS class for the current icon size
-   */
-  private getSizeClass(): string {
-    const size = this.props.iconSize || 'normal';
-    switch (size) {
-      case 'small':
-        return styles.sizeSmall;
-      case 'large':
-        return styles.sizeLarge;
-      case 'huge':
-        return styles.sizeHuge;
-      case 'normal':
-      default:
-        return styles.sizeNormal;
-    }
-  }
-
-  /**
    * Generate a default SVG icon with the first letter of the app name
    */
   private generateDefaultIcon(appName: string): string {
@@ -314,13 +296,18 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   }
 
   public render(): React.ReactElement<IMyEnterpriseAppsProps> {
-    const { title, hasTeamsContext } = this.props;
+    const { title, hasTeamsContext, iconSize, textSize, appSpacing } = this.props;
     const { apps, isLoading, error } = this.state;
     const displayTitle = title || strings.DefaultTitle;
-    const sizeClass = this.getSizeClass();
+    const layoutStyle = {
+      '--app-icon-size': `${iconSize}px`,
+      '--app-text-size': `${textSize}px`,
+      '--app-spacing': `${appSpacing}px`,
+      '--app-tile-min-width': `${Math.max(90, iconSize + 24)}px`
+    } as React.CSSProperties;
 
     return (
-      <section className={`${styles.myEnterpriseApps} ${sizeClass} ${hasTeamsContext ? styles.teams : ''}`}>
+      <section className={`${styles.myEnterpriseApps} ${hasTeamsContext ? styles.teams : ''}`} style={layoutStyle}>
         <div className={styles.container}>
           <div className={styles.header}>
             <h2>

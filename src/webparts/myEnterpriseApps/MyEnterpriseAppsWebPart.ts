@@ -5,7 +5,8 @@ import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField,
   PropertyPaneCheckbox,
-  PropertyPaneChoiceGroup
+  PropertyPaneDropdown,
+  PropertyPaneSlider
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { MSGraphClientV3 } from '@microsoft/sp-http';
@@ -13,6 +14,9 @@ import { MSGraphClientV3 } from '@microsoft/sp-http';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
 import MyEnterpriseApps from './components/MyEnterpriseApps';
 import { IMyEnterpriseAppsProps } from './components/IMyEnterpriseAppsProps';
+
+type LayoutPreset = 'small' | 'normal' | 'large' | 'huge';
+type LayoutPresetSelection = LayoutPreset | 'custom';
 
 /**
  * WebPart properties interface
@@ -22,11 +26,93 @@ export interface IMyEnterpriseAppsWebPartProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
-  iconSize: 'small' | 'normal' | 'large' | 'huge';
+  iconSize?: number | 'small' | 'normal' | 'large' | 'huge';
+  textSize?: number;
+  appSpacing?: number;
+  layoutPreset?: LayoutPresetSelection;
 }
 
 export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEnterpriseAppsWebPartProps> {
   private graphClient!: MSGraphClientV3;
+
+  private static readonly defaultIconSize: number = 48;
+  private static readonly defaultTextSize: number = 11;
+  private static readonly defaultAppSpacing: number = 12;
+
+  private getLayoutForPreset(preset: LayoutPreset): { iconSize: number; textSize: number; appSpacing: number } {
+    switch (preset) {
+      case 'small':
+        return { iconSize: 32, textSize: 9, appSpacing: 8 };
+      case 'large':
+        return { iconSize: 60, textSize: 12, appSpacing: 14 };
+      case 'huge':
+        return { iconSize: 80, textSize: 14, appSpacing: 16 };
+      case 'normal':
+      default:
+        return {
+          iconSize: MyEnterpriseAppsWebPart.defaultIconSize,
+          textSize: MyEnterpriseAppsWebPart.defaultTextSize,
+          appSpacing: MyEnterpriseAppsWebPart.defaultAppSpacing
+        };
+    }
+  }
+
+  private getLegacyLayout(): { iconSize: number; textSize: number; appSpacing: number } {
+    switch (this.properties.iconSize) {
+      case 'small':
+        return this.getLayoutForPreset('small');
+      case 'large':
+        return this.getLayoutForPreset('large');
+      case 'huge':
+        return this.getLayoutForPreset('huge');
+      case 'normal':
+      default:
+        return this.getLayoutForPreset('normal');
+    }
+  }
+
+  private migrateLegacyLayout(): void {
+    const legacyPreset = typeof this.properties.iconSize === 'string'
+      ? this.properties.iconSize
+      : undefined;
+    const legacyLayout = this.getLegacyLayout();
+
+    if (typeof this.properties.iconSize !== 'number') {
+      this.properties.iconSize = legacyLayout.iconSize;
+    }
+    if (typeof this.properties.textSize !== 'number') {
+      this.properties.textSize = legacyLayout.textSize;
+    }
+    if (typeof this.properties.appSpacing !== 'number') {
+      this.properties.appSpacing = legacyLayout.appSpacing;
+    }
+    if (legacyPreset) {
+      this.properties.layoutPreset = legacyPreset;
+    }
+  }
+
+  private getSelectedLayoutPreset(): LayoutPresetSelection {
+    return this.properties.layoutPreset || 'custom';
+  }
+
+  protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: unknown, newValue: unknown): void {
+    if (propertyPath === 'layoutPreset' && newValue !== 'custom') {
+      const preset = newValue as LayoutPreset;
+      const layout = this.getLayoutForPreset(preset);
+      this.properties.layoutPreset = preset;
+      this.properties.iconSize = layout.iconSize;
+      this.properties.textSize = layout.textSize;
+      this.properties.appSpacing = layout.appSpacing;
+    } else if (
+      (propertyPath === 'iconSize' || propertyPath === 'textSize' || propertyPath === 'appSpacing') &&
+      oldValue !== newValue
+    ) {
+      this.properties.layoutPreset = 'custom';
+    }
+
+    super.onPropertyPaneFieldChanged(propertyPath, oldValue, newValue);
+    this.context.propertyPane.refresh();
+  }
 
   public render(): void {
     const element: React.ReactElement<IMyEnterpriseAppsProps> = React.createElement(
@@ -36,7 +122,9 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         sortOrder: this.properties.sortOrder,
         showHiddenApps: this.properties.showHiddenApps,
         showDefaultApps: this.properties.showDefaultApps,
-        iconSize: this.properties.iconSize || 'normal',
+        iconSize: this.properties.iconSize as number,
+        textSize: this.properties.textSize as number,
+        appSpacing: this.properties.appSpacing as number,
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
         graphClient: this.graphClient
       }
@@ -47,6 +135,7 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
 
   protected async onInit(): Promise<void> {
     await super.onInit();
+    this.migrateLegacyLayout();
     this.graphClient = await this.context.msGraphClientFactory.getClient('3');
     // Set a localized default title when empty
     if (!this.properties.title || this.properties.title.trim() === '') {
@@ -88,14 +177,40 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                 PropertyPaneCheckbox('showHiddenApps', {
                   text: strings.ShowHiddenAppsLabel
                 }),
-                PropertyPaneChoiceGroup('iconSize', {
-                  label: strings.IconSizeFieldLabel,
+                PropertyPaneDropdown('layoutPreset', {
+                  label: strings.LayoutPresetFieldLabel,
+                  selectedKey: this.getSelectedLayoutPreset(),
                   options: [
-                    { key: 'small', text: strings.IconSizeSmall },
-                    { key: 'normal', text: strings.IconSizeNormal },
-                    { key: 'large', text: strings.IconSizeLarge },
-                    { key: 'huge', text: strings.IconSizeHuge }
+                    { key: 'small', text: strings.LayoutPresetSmall },
+                    { key: 'normal', text: strings.LayoutPresetNormal },
+                    { key: 'large', text: strings.LayoutPresetLarge },
+                    { key: 'huge', text: strings.LayoutPresetHuge },
+                    { key: 'custom', text: strings.LayoutPresetCustom }
                   ]
+                }),
+                PropertyPaneSlider('iconSize', {
+                  label: `${strings.IconSizeFieldLabel} (${this.properties.iconSize}px)`,
+                  min: 12,
+                  max: 256,
+                  step: 4,
+                  value: this.properties.iconSize as number,
+                  showValue: false
+                }),
+                PropertyPaneSlider('textSize', {
+                  label: `${strings.TextSizeFieldLabel} (${this.properties.textSize}px)`,
+                  min: 6,
+                  max: 48,
+                  step: 1,
+                  value: this.properties.textSize,
+                  showValue: false
+                }),
+                PropertyPaneSlider('appSpacing', {
+                  label: `${strings.AppSpacingFieldLabel} (${this.properties.appSpacing}px)`,
+                  min: 0,
+                  max: 64,
+                  step: 2,
+                  value: this.properties.appSpacing,
+                  showValue: false
                 })
               ]
             }

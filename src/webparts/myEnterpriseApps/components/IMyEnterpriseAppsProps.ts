@@ -8,7 +8,9 @@ export interface IMyEnterpriseAppsProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
-  iconSize: 'small' | 'normal' | 'large' | 'huge';
+  iconSize: number;
+  textSize: number;
+  appSpacing: number;
   hasTeamsContext: boolean;
   graphClient: MSGraphClientV3;
 }
