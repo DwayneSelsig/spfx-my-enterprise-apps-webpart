@@ -22,6 +22,8 @@ export interface IMyEnterpriseAppsState {
   apps: IAppData[];
   isLoading: boolean;
   error: string | undefined;
+  filterQuery: string;
+  isFilterOpen: boolean;
 }
 
 /**

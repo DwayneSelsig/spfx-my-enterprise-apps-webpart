@@ -18,6 +18,11 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   DefaultTitle: string;
   AllAppsLabel: string;
   NoAppsFound: string;
+  FilterAppsLabel: string;
+  FilterAppsPlaceholder: string;
+  ClearFilterLabel: string;
+  CloseFilterLabel: string;
+  NoFilterResults: string;
   ErrorLoading: string;
   AppLocalEnvironmentSharePoint: string;
   AppLocalEnvironmentTeams: string;

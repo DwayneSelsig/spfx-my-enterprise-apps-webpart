@@ -54,6 +54,18 @@
     }
   }
 
+  .filterBar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+  }
+
+  .filterSearchBox {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .appsList {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--app-tile-min-width), 1fr));

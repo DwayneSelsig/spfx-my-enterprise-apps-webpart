@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { IconButton, SearchBox, type ISearchBox } from '@fluentui/react';
 import styles from './MyEnterpriseApps.module.scss';
 import type {
   IMyEnterpriseAppsProps,
@@ -11,13 +12,16 @@ import { defaultApps } from '../assets/DefaultApps';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
 
 export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsProps, IMyEnterpriseAppsState> {
+  private readonly searchBoxRef = React.createRef<ISearchBox>();
   
   constructor(props: IMyEnterpriseAppsProps) {
     super(props);
     this.state = {
       apps: [],
       isLoading: true,
-      error: undefined
+      error: undefined,
+      filterQuery: '',
+      isFilterOpen: false
     };
   }
 
@@ -51,6 +55,26 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   private normalizeName(name: string): string {
     return (name || '').trim().toLowerCase();
   }
+
+  private openFilter = (): void => {
+    this.setState({ isFilterOpen: true }, () => {
+      this.searchBoxRef.current?.focus();
+    });
+  };
+
+  private closeFilter = (): void => {
+    this.setState({ filterQuery: '', isFilterOpen: false });
+  };
+
+  private onFilterEscape = (event?: { preventDefault: () => void; stopPropagation: () => void }): void => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    this.closeFilter();
+  };
+
+  private onFilterChange = (_event?: React.ChangeEvent<HTMLInputElement>, newValue?: string): void => {
+    this.setState({ filterQuery: newValue || '' });
+  };
 
   /**
    * Load apps from Microsoft Graph API
@@ -297,8 +321,13 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
   public render(): React.ReactElement<IMyEnterpriseAppsProps> {
     const { title, hasTeamsContext, iconSize, textSize, appSpacing } = this.props;
-    const { apps, isLoading, error } = this.state;
+    const { apps, isLoading, error, filterQuery, isFilterOpen } = this.state;
     const displayTitle = title || strings.DefaultTitle;
+    const normalizedFilterQuery = this.normalizeName(filterQuery);
+    const filteredApps = normalizedFilterQuery
+      ? apps.filter(app => this.normalizeName(app.name).indexOf(normalizedFilterQuery) !== -1)
+      : apps;
+    const hasNoSearchResults = normalizedFilterQuery.length > 0 && filteredApps.length === 0;
     const layoutStyle = {
       '--app-icon-size': `${iconSize}px`,
       '--app-text-size': `${textSize}px`,
@@ -322,6 +351,36 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
               {strings.AllAppsLabel}
             </a>
           </div>
+
+          <div className={styles.filterBar}>
+            {!isFilterOpen ? (
+              <IconButton
+                iconProps={{ iconName: 'Filter' }}
+                ariaLabel={strings.FilterAppsLabel}
+                title={strings.FilterAppsLabel}
+                onClick={this.openFilter}
+              />
+            ) : (
+              <>
+                <SearchBox
+                  componentRef={this.searchBoxRef}
+                  className={styles.filterSearchBox}
+                  value={filterQuery}
+                  placeholder={strings.FilterAppsPlaceholder}
+                  ariaLabel={strings.FilterAppsLabel}
+                  clearButtonProps={{ ariaLabel: strings.ClearFilterLabel }}
+                  onChange={this.onFilterChange}
+                  onEscape={this.onFilterEscape}
+                />
+                <IconButton
+                  iconProps={{ iconName: 'Cancel' }}
+                  ariaLabel={strings.CloseFilterLabel}
+                  title={strings.CloseFilterLabel}
+                  onClick={this.closeFilter}
+                />
+              </>
+            )}
+          </div>
           
           <div className={styles.appsList}>
             {error && (
@@ -332,13 +391,19 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
             
             {isLoading && this.renderSkeletonItems()}
             
-            {!isLoading && !error && apps.length === 0 && (
+            {!isLoading && !error && hasNoSearchResults && (
+              <div className={styles.noAppsMessage}>
+                {strings.NoFilterResults}
+              </div>
+            )}
+
+            {!isLoading && !error && !hasNoSearchResults && apps.length === 0 && (
               <div className={styles.noAppsMessage}>
                 {strings.NoAppsFound}
               </div>
             )}
             
-            {!isLoading && !error && apps.map(app => this.renderAppItem(app))}
+            {!isLoading && !error && !hasNoSearchResults && filteredApps.map(app => this.renderAppItem(app))}
           </div>
         </div>
       </section>
