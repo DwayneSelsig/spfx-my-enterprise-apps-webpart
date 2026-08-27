@@ -68,6 +68,7 @@ We welcome contributions from the community! Here are some ways you can help:
 | 0.5.0.0 | 2025-12-25          | Initial release |
 | 0.6.0.0 | 2026-01-01          | Added Microsoft Apps |
 | 0.6.1.0 | 2026-05-25       | Upgraded to SPFx 1.23.0 |
+| 0.7.0.0 | 2026-08-27       | Added end-user filtering and custom app sizing; updated SPFx packages and Copilot logo |
 
 ## Used SharePoint Framework Version
 
