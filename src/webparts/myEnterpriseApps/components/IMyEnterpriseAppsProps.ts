@@ -8,6 +8,10 @@ export interface IMyEnterpriseAppsProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
+  displayInternalNotes: boolean;
+  displayAppIdentifiers: boolean;
+  displayOAuthScopes: boolean;
+  enableDetailView: boolean;
   iconSize: number;
   textSize: number;
   appSpacing: number;
@@ -26,6 +30,7 @@ export interface IMyEnterpriseAppsState {
   isFilterOpen: boolean;
   selectedApp: IAppData | undefined;
   isDetailTransitioning: boolean;
+  isReturningToResults: boolean;
   isDetailDismissed: boolean;
 }
 
@@ -48,6 +53,7 @@ export interface IServicePrincipalInfo {
   appOwnerOrganizationId?: string;
   displayName?: string;
   appDescription?: string;
+  notes?: string;
   homepage?: string;
   publisherName?: string;
   preferredSingleSignOnMode?: string;

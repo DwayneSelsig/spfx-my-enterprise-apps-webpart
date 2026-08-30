@@ -26,6 +26,10 @@ export interface IMyEnterpriseAppsWebPartProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
+  displayInternalNotes?: boolean;
+  displayAppIdentifiers?: boolean;
+  displayOAuthScopes?: boolean;
+  enableDetailView?: boolean;
   iconSize?: number | 'small' | 'normal' | 'large' | 'huge';
   textSize?: number;
   appSpacing?: number;
@@ -89,6 +93,15 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
     if (legacyPreset) {
       this.properties.layoutPreset = legacyPreset;
     }
+    if (typeof this.properties.displayAppIdentifiers !== 'boolean') {
+      this.properties.displayAppIdentifiers = true;
+    }
+    if (typeof this.properties.displayOAuthScopes !== 'boolean') {
+      this.properties.displayOAuthScopes = true;
+    }
+    if (typeof this.properties.enableDetailView !== 'boolean') {
+      this.properties.enableDetailView = true;
+    }
   }
 
   private getSelectedLayoutPreset(): LayoutPresetSelection {
@@ -122,6 +135,10 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         sortOrder: this.properties.sortOrder,
         showHiddenApps: this.properties.showHiddenApps,
         showDefaultApps: this.properties.showDefaultApps,
+        displayInternalNotes: !!this.properties.displayInternalNotes,
+        displayAppIdentifiers: this.properties.displayAppIdentifiers !== false,
+        displayOAuthScopes: this.properties.displayOAuthScopes !== false,
+        enableDetailView: this.properties.enableDetailView !== false,
         iconSize: this.properties.iconSize as number,
         textSize: this.properties.textSize as number,
         appSpacing: this.properties.appSpacing as number,
@@ -211,6 +228,26 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   step: 2,
                   value: this.properties.appSpacing,
                   showValue: false
+                })
+              ]
+            },
+            {
+              groupName: strings.DetailViewGroupName,
+              groupFields: [
+                PropertyPaneCheckbox('enableDetailView', {
+                  text: strings.EnableDetailViewLabel
+                }),
+                PropertyPaneCheckbox('displayInternalNotes', {
+                  text: strings.DisplayInternalNotesLabel,
+                  disabled: this.properties.enableDetailView === false
+                }),
+                PropertyPaneCheckbox('displayAppIdentifiers', {
+                  text: strings.DisplayAppIdentifiersLabel,
+                  disabled: this.properties.enableDetailView === false
+                }),
+                PropertyPaneCheckbox('displayOAuthScopes', {
+                  text: strings.DisplayOAuthScopesLabel,
+                  disabled: this.properties.enableDetailView === false
                 })
               ]
             }

@@ -1,11 +1,16 @@
 declare interface IMyEnterpriseAppsWebPartStrings {
   PropertyPaneDescription: string;
   BasicGroupName: string;
+  DetailViewGroupName: string;
   TitleFieldLabel: string;
   SortOrderFieldLabel: string;
   SortOrderFieldDescription: string;
   ShowHiddenAppsLabel: string;
   ShowDefaultAppsLabel: string;
+  DisplayInternalNotesLabel: string;
+  DisplayAppIdentifiersLabel: string;
+  DisplayOAuthScopesLabel: string;
+  EnableDetailViewLabel: string;
   LayoutPresetFieldLabel: string;
   LayoutPresetSmall: string;
   LayoutPresetNormal: string;
@@ -35,6 +40,7 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   TermsOfService: string;
   OpenTermsOfService: string;
   OAuthScopes: string;
+  Resources: string;
   VerifiedPublisher: string;
   PasswordSso: string;
   LinkedSso: string;

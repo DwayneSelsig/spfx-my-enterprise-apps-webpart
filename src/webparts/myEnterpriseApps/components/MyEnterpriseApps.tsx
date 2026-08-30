@@ -26,6 +26,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       isFilterOpen: false,
       selectedApp: undefined,
       isDetailTransitioning: false,
+      isReturningToResults: false,
       isDetailDismissed: false
     };
   }
@@ -43,6 +44,19 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   }
 
   public componentDidUpdate(prevProps: IMyEnterpriseAppsProps): void {
+    if (prevProps.enableDetailView && !this.props.enableDetailView && this.state.selectedApp) {
+      this.cancelDetailTransition();
+      this.setState({
+        selectedApp: undefined,
+        isDetailTransitioning: false,
+        isReturningToResults: false,
+        isDetailDismissed: false
+      });
+    }
+    if (!prevProps.enableDetailView && this.props.enableDetailView) {
+      this.openDetailForExactMatch();
+    }
+
     // Reload if sort order or showHiddenApps changes
     if (prevProps.sortOrder !== this.props.sortOrder ||
         prevProps.showHiddenApps !== this.props.showHiddenApps ||
@@ -52,6 +66,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       this.setState({
         selectedApp: undefined,
         isDetailTransitioning: false,
+        isReturningToResults: false,
         isDetailDismissed: false
       });
       this.loadApps().catch(error => {
@@ -87,6 +102,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       isFilterOpen: false,
       selectedApp: undefined,
       isDetailTransitioning: false,
+      isReturningToResults: false,
       isDetailDismissed: false
     });
   };
@@ -98,14 +114,49 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   };
 
   private onFilterChange = (_event?: React.ChangeEvent<HTMLInputElement>, newValue?: string): void => {
+    const previousResultCount = this.getFilteredApps().length;
+    const nextFilterQuery = newValue || '';
+    const nextMatchingApps = this.getFilteredApps(nextFilterQuery);
+    const nextResultCount = nextMatchingApps.length;
+    const delayBeforeDetail = previousResultCount !== 1 && nextResultCount === 1 ? 250 : 0;
+    const selectedApp = this.state.selectedApp;
+    const wasShowingDetail = !!selectedApp;
+    const selectedAppKey = selectedApp?.resourceId || this.normalizeName(selectedApp?.name || '');
+    const nextAppKey = nextMatchingApps[0]?.resourceId || this.normalizeName(nextMatchingApps[0]?.name || '');
+    const remainsOnSelectedApp = wasShowingDetail && nextResultCount === 1 && selectedAppKey === nextAppKey;
+
     this.cancelDetailTransition();
     this.detailRequestId++;
-    this.setState({
-      filterQuery: newValue || '',
+
+    if (remainsOnSelectedApp) {
+      this.setState({
+        filterQuery: nextFilterQuery,
+        isDetailTransitioning: false,
+        isReturningToResults: false,
+        isDetailDismissed: false
+      });
+      return;
+    }
+
+    const nextState = {
+      filterQuery: nextFilterQuery,
       selectedApp: undefined,
       isDetailTransitioning: false,
+      isReturningToResults: false,
       isDetailDismissed: false
-    }, this.openDetailForExactMatch);
+    };
+    const afterFilterChange = (): void => this.openDetailForExactMatch(delayBeforeDetail);
+
+    if (wasShowingDetail && this.startViewTransition(complete => {
+      this.setState(nextState, () => {
+        complete();
+        window.requestAnimationFrame(afterFilterChange);
+      });
+    })) {
+      return;
+    }
+
+    this.setState(nextState, afterFilterChange);
   };
 
   private cancelDetailTransition(): void {
@@ -121,6 +172,20 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
+  private startViewTransition(update: (complete: () => void) => void): boolean {
+    if (this.prefersReducedMotion() || typeof document === 'undefined') {
+      return false;
+    }
+
+    const transitionDocument = document as Partial<Pick<Document, 'startViewTransition'>>;
+    if (typeof transitionDocument.startViewTransition !== 'function') {
+      return false;
+    }
+
+    transitionDocument.startViewTransition(() => new Promise<void>(resolve => update(resolve)));
+    return true;
+  }
+
   private getFilteredApps(query: string = this.state.filterQuery): IAppData[] {
     const normalizedQuery = this.normalizeName(query);
     return normalizedQuery
@@ -128,12 +193,12 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       : this.state.apps;
   }
 
-  private openDetailForExactMatch = (): void => {
+  private openDetailForExactMatch = (delayBeforeDetail: number = 0): void => {
     const { isLoading, isDetailDismissed } = this.state;
     const hasSearchQuery = this.normalizeName(this.state.filterQuery).length > 0;
     const matchingApps = this.getFilteredApps();
 
-    if (isLoading || isDetailDismissed || !hasSearchQuery || matchingApps.length !== 1) {
+    if (!this.props.enableDetailView || isLoading || isDetailDismissed || !hasSearchQuery || matchingApps.length !== 1) {
       return;
     }
 
@@ -147,23 +212,68 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       });
     };
 
-    if (this.prefersReducedMotion()) {
-      showDetail();
+    const beginDetailTransition = (): void => {
+      this.detailTransitionTimer = undefined;
+
+      if (this.startViewTransition(complete => {
+        this.setState({
+          selectedApp,
+          isDetailTransitioning: false,
+          isReturningToResults: false,
+          isDetailDismissed: false
+        }, complete);
+      })) {
+        return;
+      }
+
+      if (this.prefersReducedMotion()) {
+        showDetail();
+        return;
+      }
+
+      this.setState({ isDetailTransitioning: true });
+      this.detailTransitionTimer = window.setTimeout(showDetail, 160);
+    };
+
+    if (delayBeforeDetail > 0 && !this.prefersReducedMotion()) {
+      this.detailTransitionTimer = window.setTimeout(beginDetailTransition, delayBeforeDetail);
       return;
     }
 
-    this.setState({ isDetailTransitioning: true });
-    this.detailTransitionTimer = window.setTimeout(showDetail, 160);
+    beginDetailTransition();
   };
 
   private returnToResults = (): void => {
     this.cancelDetailTransition();
     this.detailRequestId++;
-    this.setState({
-      selectedApp: undefined,
-      isDetailTransitioning: false,
-      isDetailDismissed: true
-    });
+    const showResults = (): void => {
+      this.detailTransitionTimer = undefined;
+      this.setState({
+        selectedApp: undefined,
+        isDetailTransitioning: false,
+        isReturningToResults: false,
+        isDetailDismissed: true
+      });
+    };
+
+    if (this.startViewTransition(complete => {
+      this.setState({
+        selectedApp: undefined,
+        isDetailTransitioning: false,
+        isReturningToResults: false,
+        isDetailDismissed: true
+      }, complete);
+    })) {
+      return;
+    }
+
+    if (this.prefersReducedMotion()) {
+      showResults();
+      return;
+    }
+
+    this.setState({ isReturningToResults: true });
+    this.detailTransitionTimer = window.setTimeout(showResults, 180);
   };
 
   /**
@@ -319,7 +429,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
         const spInfo: IServicePrincipalInfo = await graphClient
           .api(`/servicePrincipals/${app.resourceId}`)
-          .select('id,appId,appOwnerOrganizationId,displayName,appDescription,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
+          .select('id,appId,appOwnerOrganizationId,displayName,appDescription,notes,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
           .get();
 
         // Construct login URL
@@ -381,8 +491,8 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   /**
    * Render a single app item
    */
-  private renderAppItem(app: IAppData): React.ReactElement {
-    const appClasses = `${styles.appItem}${app.isHidden ? ` ${styles.hiddenApp}` : ''}`;
+  private renderAppItem(app: IAppData, isTransitionCandidate: boolean = false): React.ReactElement {
+    const appClasses = `${styles.appItem}${app.isHidden ? ` ${styles.hiddenApp}` : ''}${isTransitionCandidate ? ` ${styles.transitionCandidate}` : ''}`;
 
     const content = (
       <>
@@ -412,10 +522,6 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     );
   }
 
-  private renderUnavailable(): React.ReactElement {
-    return <p className={styles.notAvailable}>{strings.NotAvailable}</p>;
-  }
-
   private getSsoLabel(mode: string | undefined): string | undefined {
     if (!mode) {
       return undefined;
@@ -431,26 +537,28 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     return labels[mode] || mode;
   }
 
-  private renderOAuthScopes(servicePrincipal: IServicePrincipalInfo | undefined): React.ReactElement {
+  private renderOAuthScopes(servicePrincipal: IServicePrincipalInfo | undefined): React.ReactElement | null {
     const scopes = (servicePrincipal?.oauth2PermissionScopes || []).filter(scope => scope.isEnabled !== false);
 
+    if (scopes.length === 0) {
+      return null;
+    }
+
     return (
-      <section className={styles.detailSection}>
+      <section className={styles.detailInfoBlock}>
         <h3>{strings.OAuthScopes}</h3>
-        {scopes.length === 0 ? this.renderUnavailable() : (
-          <ul className={styles.scopesList}>
-            {scopes.map(scope => (
-              <li key={scope.id || scope.value}>
-                <span className={styles.scopeName}>{scope.value}</span>
-                {(scope.userConsentDescription || scope.adminConsentDescription) && (
-                  <span className={styles.scopeDescription}>
-                    {scope.userConsentDescription || scope.adminConsentDescription}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className={styles.scopesList}>
+          {scopes.map(scope => (
+            <li key={scope.id || scope.value}>
+              <span className={styles.scopeName}>{scope.value}</span>
+              {(scope.userConsentDescription || scope.adminConsentDescription) && (
+                <span className={styles.scopeDescription}>
+                  {scope.userConsentDescription || scope.adminConsentDescription}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
       </section>
     );
   }
@@ -462,6 +570,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     const ssoMode = this.getSsoLabel(servicePrincipal?.preferredSingleSignOnMode);
     const termsUrl = servicePrincipal?.info?.termsOfServiceUrl;
     const homepage = servicePrincipal?.homepage;
+    const notes = servicePrincipal?.notes?.trim();
+    const hasResources = !!homepage || !!termsUrl || !!ssoMode;
+    const hasOAuthScopes = servicePrincipal?.oauth2PermissionScopes?.some(scope => scope.isEnabled !== false) === true;
+    const showAppIdentifiers = this.props.displayAppIdentifiers;
+    const showOAuthScopes = this.props.displayOAuthScopes && hasOAuthScopes;
 
     return (
       <div className={styles.detailView} aria-live="polite">
@@ -478,47 +591,60 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         </div>
 
         <article className={styles.detailCard}>
-          <header className={styles.detailHeader}>
-            <div className={styles.detailIdentity}>
+          <div className={styles.detailLayout}>
+            <aside className={styles.detailAside}>
               <div className={styles.detailIcon}>
                 <img src={app.iconUrl} alt={app.name} />
               </div>
-              <div>
-                <h2>{servicePrincipal?.displayName || app.name}</h2>
-                {publisher && <p className={styles.publisher}>{publisher}</p>}
-                {verifiedPublisher && <p className={styles.verifiedPublisher}>{strings.VerifiedPublisher}: {verifiedPublisher}</p>}
-              </div>
+              {app.url && (
+                <a className={styles.openAppButton} href={app.url} target="_blank" rel="noopener noreferrer">
+                  {strings.OpenApp}
+                </a>
+              )}
+            </aside>
+
+            <div className={styles.detailContent}>
+              <header className={styles.detailHeader}>
+                <div className={styles.detailIdentity}>
+                  <h2 className={styles.detailTitle}>{servicePrincipal?.displayName || app.name}</h2>
+                  {publisher && <p className={styles.publisher}>{publisher}</p>}
+                  {verifiedPublisher && <p className={styles.verifiedPublisher}>{strings.VerifiedPublisher}: {verifiedPublisher}</p>}
+                </div>
+                {this.props.displayInternalNotes && notes && <p className={styles.appNotes}>{notes}</p>}
+                {hasResources && (
+                  <section className={styles.detailInfoBlock}>
+                    <h3>{strings.Resources}</h3>
+                    <ul className={styles.resourceList}>
+                      {homepage && (
+                        <li><a href={homepage} target="_blank" rel="noopener noreferrer">{strings.Homepage}</a></li>
+                      )}
+                      {termsUrl && (
+                        <li><a href={termsUrl} target="_blank" rel="noopener noreferrer">{strings.OpenTermsOfService}</a></li>
+                      )}
+                      {ssoMode && (
+                        <li><span>{strings.SingleSignOn}</span><strong>{ssoMode}</strong></li>
+                      )}
+                    </ul>
+                  </section>
+                )}
+              </header>
+
+              {servicePrincipal?.appDescription && (
+                <p className={styles.appDescription}>{servicePrincipal.appDescription}</p>
+              )}
+
+              {(showAppIdentifiers || showOAuthScopes) && (
+                <div className={styles.detailInfoGrid}>
+                  {showAppIdentifiers && (
+                    <div className={styles.metadata}>
+                      <div><span>{strings.AppId}</span><code>{servicePrincipal?.appId || strings.NotAvailable}</code></div>
+                      <div><span>{strings.ServicePrincipalId}</span><code>{app.resourceId || strings.NotAvailable}</code></div>
+                    </div>
+                  )}
+                  {showOAuthScopes && this.renderOAuthScopes(servicePrincipal)}
+                </div>
+              )}
             </div>
-            {app.url && (
-              <a className={styles.openAppButton} href={app.url} target="_blank" rel="noopener noreferrer">
-                {strings.OpenApp}
-              </a>
-            )}
-          </header>
-
-          <div className={styles.metadata}>
-            <div><span>{strings.AppId}</span><code>{servicePrincipal?.appId || strings.NotAvailable}</code></div>
-            <div><span>{strings.ServicePrincipalId}</span><code>{app.resourceId || strings.NotAvailable}</code></div>
-            {homepage && <div><span>{strings.Homepage}</span><a href={homepage} target="_blank" rel="noopener noreferrer">{homepage}</a></div>}
-          </div>
-
-          <div className={styles.detailSections}>
-            <section className={styles.detailSection}>
-              <h3>{strings.Description}</h3>
-              {servicePrincipal?.appDescription ? <p>{servicePrincipal.appDescription}</p> : this.renderUnavailable()}
-            </section>
-
-            <section className={styles.detailSection}>
-              <h3>{strings.SingleSignOn}</h3>
-              {ssoMode ? <p>{ssoMode}</p> : this.renderUnavailable()}
-            </section>
-
-            <section className={styles.detailSection}>
-              <h3>{strings.TermsOfService}</h3>
-              {termsUrl ? <a href={termsUrl} target="_blank" rel="noopener noreferrer">{strings.OpenTermsOfService}</a> : this.renderUnavailable()}
-            </section>
-
-            {this.renderOAuthScopes(servicePrincipal)}
           </div>
         </article>
       </div>
@@ -534,6 +660,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       ? apps.filter(app => this.normalizeName(app.name).indexOf(normalizedFilterQuery) !== -1)
       : apps;
     const hasNoSearchResults = normalizedFilterQuery.length > 0 && filteredApps.length === 0;
+    const hasExactSearchResult = this.props.enableDetailView && normalizedFilterQuery.length > 0 && filteredApps.length === 1;
     const layoutStyle = {
       '--app-icon-size': `${iconSize}px`,
       '--app-text-size': `${textSize}px`,
@@ -588,7 +715,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
             )}
           </div>
           
-          {selectedApp ? this.renderAppDetail(selectedApp) : (
+          {selectedApp ? (
+            <div className={this.state.isReturningToResults ? styles.detailViewLeaving : undefined}>
+              {this.renderAppDetail(selectedApp)}
+            </div>
+          ) : (
             <div className={`${styles.appsList}${isDetailTransitioning ? ` ${styles.appsListFading}` : ''}`}>
               {error && (
                 <div className={styles.errorMessage}>
@@ -610,7 +741,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
                 </div>
               )}
 
-              {!isLoading && !error && !hasNoSearchResults && filteredApps.map(app => this.renderAppItem(app))}
+              {!isLoading && !error && !hasNoSearchResults && filteredApps.map(app => this.renderAppItem(app, hasExactSearchResult))}
             </div>
           )}
         </div>
