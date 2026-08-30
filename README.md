@@ -32,6 +32,91 @@ The webpart can be configured through the property pane with the following optio
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
+## Adding an app from Microsoft Entra ID
+
+This webpart displays the enterprise applications for which the current user has an app-role assignment. Creating an **App registration** by itself is therefore not enough: the app must have a corresponding **Enterprise application** (service principal) and the user, or a group of which the user is a direct member, must be assigned to it.
+
+### Microsoft Entra admin center
+
+Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com) as a Cloud Application Administrator or Application Administrator, then:
+
+1. Go to **Entra ID** > **Enterprise applications** > **All applications** > **New application**.
+2. Select an application from the gallery, or select **Create your own application** for a custom application. Configure SSO when the application requires it.
+3. Open the application and go to **Properties**:
+   - Set **Enabled for users to sign in?** to **Yes**.
+   - Set **Visible to users?** to **Yes**.
+   - Upload a logo. Use a PNG of exactly **215 x 215 pixels**, no larger than **100 KB**. This is the icon shown by Entra and used by the webpart when available.
+4. Go to **Users and groups** > **Add user/group**, select an existing user or—preferably—an existing security group, select the appropriate role (or **Default Access**) and choose **Assign**.
+5. Next, go to **Entra ID** > **App registrations** > **All applications** and open the app registration that has the same **Application (client) ID** as the enterprise application. Then:
+   - Under **Branding & properties**, enter the **Home page URL**.
+   - Under **Authentication**, choose the appropriate platform (for example, **Web**) and add the required **Redirect URI**.
+6. Ensure the webpart's Microsoft Graph requests are approved by a tenant admin in the SharePoint admin center: `User.Read` and `Application.Read.All`.
+
+The **App registrations** step applies to custom or tenant-owned applications. Gallery applications usually have an app registration owned by the software vendor, so configure their sign-in URL and SSO settings in the enterprise application instead.
+
+If **Show Hidden Apps** is disabled in the webpart properties, applications tagged `HideApp` are deliberately excluded. It can take a few minutes for a new Entra assignment to become visible.
+
+### PowerShell
+
+The examples below use the current `Microsoft.Entra` PowerShell module, rather than the retired `AzureAD` module. Replace values between angle brackets before running them. The signed-in account needs a suitable Entra administrator role, such as Cloud Application Administrator. These examples only use existing users and groups; they don't create either.
+
+Install the module once, then connect with the required delegated permissions:
+
+```powershell
+Install-Module Microsoft.Entra -Scope CurrentUser
+Connect-Entra -Scopes 'Application.ReadWrite.All','Application.Read.All','AppRoleAssignment.ReadWrite.All','User.Read.All','Group.Read.All'
+```
+
+Create the app registration and its enterprise application first. Then configure the homepage and redirect URI, upload the icon, and assign an existing user:
+
+```powershell
+$app = New-EntraApplication -DisplayName '<App display name>'
+
+$servicePrincipal = New-EntraServicePrincipal `
+  -AppId $app.AppId `
+  -DisplayName $app.DisplayName `
+  -Tags @('WindowsAzureActiveDirectoryIntegratedApp')
+
+$web = @{
+  homePageUrl = 'https://app.contoso.com'
+  redirectUris = @('https://app.contoso.com/signin-oidc')
+}
+
+Set-EntraApplication -ApplicationId $app.Id -Web $web
+
+Set-EntraServicePrincipal `
+  -ServicePrincipalId $servicePrincipal.Id `
+  -AccountEnabled $true `
+  -AppRoleAssignmentRequired $true `
+  -Homepage $web.homePageUrl `
+  -ReplyUrls $web.redirectUris
+
+Set-EntraApplicationLogo `
+  -ApplicationId $app.Id `
+  -FilePath 'C:\path\to\app-logo.png'
+
+$user = Get-EntraUser -UserId '<user@contoso.com>'
+New-EntraUserAppRoleAssignment `
+  -UserId $user.Id `
+  -PrincipalId $user.Id `
+  -ResourceId $servicePrincipal.Id `
+  -AppRoleId ([Guid]::Empty)
+```
+
+To assign the newly created enterprise application to an existing group instead of a user, replace the final user-assignment block with the following. Group assignment requires the appropriate Microsoft Entra ID licence, and nested group membership is not supported.
+
+```powershell
+$group = Get-EntraGroup -SearchString '<Group display name>'
+
+New-EntraGroupAppRoleAssignment `
+  -GroupId $group.Id `
+  -PrincipalId $group.Id `
+  -ResourceId $servicePrincipal.Id `
+  -AppRoleId ([Guid]::Empty)
+```
+
+For an app with defined app roles, replace `[Guid]::Empty` with the ID of the role to assign. See the [enterprise-application properties](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/application-properties), [user/group assignment](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/assign-user-or-group-access-portal), and [Microsoft Entra PowerShell](https://learn.microsoft.com/en-us/powershell/entra-powershell/overview) documentation for details.
+
 ## Installation and Upgrades
 
 ### Download or compile
