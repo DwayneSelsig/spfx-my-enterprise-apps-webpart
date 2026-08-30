@@ -44,6 +44,8 @@ define([], function() {
     "OAuthScopes": "Beschikbare OAuth-scopes",
     "Resources": "Informatie",
     "VerifiedPublisher": "Geverifieerde uitgever",
+    "SamlSso": "SAML",
+    "OpenIdConnectSso": "OpenID Connect",
     "PasswordSso": "Wachtwoord-SSO",
     "LinkedSso": "Gekoppelde SSO",
     "SsoNotSupported": "Niet ondersteund",

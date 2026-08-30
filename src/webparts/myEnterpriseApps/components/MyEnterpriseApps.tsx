@@ -541,37 +541,37 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     }
 
     const labels: { [key: string]: string } = {
-      saml: 'SAML',
+      saml: strings.SamlSso,
       password: strings.PasswordSso,
-      oidc: 'OpenID Connect',
+      oidc: strings.OpenIdConnectSso,
       linked: strings.LinkedSso,
       notSupported: strings.SsoNotSupported
     };
     return labels[mode] || mode;
   }
 
-  private renderOAuthScopes(servicePrincipal: IServicePrincipalInfo | undefined): React.ReactElement | null {
+  private renderOAuthScopes(servicePrincipal: IServicePrincipalInfo | undefined): React.ReactElement {
     const scopes = (servicePrincipal?.oauth2PermissionScopes || []).filter(scope => scope.isEnabled !== false);
-
-    if (scopes.length === 0) {
-      return null;
-    }
 
     return (
       <section className={styles.detailInfoBlock}>
         <h3>{strings.OAuthScopes}</h3>
-        <ul className={styles.scopesList}>
-          {scopes.map(scope => (
-            <li key={scope.id || scope.value}>
-              <span className={styles.scopeName}>{scope.value}</span>
-              {(scope.userConsentDescription || scope.adminConsentDescription) && (
-                <span className={styles.scopeDescription}>
-                  {scope.userConsentDescription || scope.adminConsentDescription}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
+        {scopes.length === 0 ? (
+          <p className={styles.notAvailable}>{strings.NotAvailable}</p>
+        ) : (
+          <ul className={styles.scopesList}>
+            {scopes.map(scope => (
+              <li key={scope.id || scope.value}>
+                <span className={styles.scopeName}>{scope.value}</span>
+                {(scope.userConsentDescription || scope.adminConsentDescription) && (
+                  <span className={styles.scopeDescription}>
+                    {scope.userConsentDescription || scope.adminConsentDescription}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     );
   }
@@ -585,9 +585,8 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     const homepage = servicePrincipal?.homepage;
     const notes = servicePrincipal?.notes?.trim();
     const hasResources = !!homepage || !!termsUrl || !!ssoMode;
-    const hasOAuthScopes = servicePrincipal?.oauth2PermissionScopes?.some(scope => scope.isEnabled !== false) === true;
     const showAppIdentifiers = this.props.displayAppIdentifiers;
-    const showOAuthScopes = this.props.displayOAuthScopes && hasOAuthScopes;
+    const showOAuthScopes = this.props.displayOAuthScopes;
 
     return (
       <div className={styles.detailView} aria-live="polite">

@@ -43,6 +43,8 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   OAuthScopes: string;
   Resources: string;
   VerifiedPublisher: string;
+  SamlSso: string;
+  OpenIdConnectSso: string;
   PasswordSso: string;
   LinkedSso: string;
   SsoNotSupported: string;

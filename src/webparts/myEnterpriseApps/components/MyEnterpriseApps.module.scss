@@ -432,6 +432,13 @@
     }
   }
 
+  .notAvailable {
+    color: "[theme:bodySubtext, default:#605e5c]";
+    color: var(--bodySubtext);
+    font-size: 13px;
+    margin: 0;
+  }
+
   .resourceList,
   .scopesList {
     list-style: none;
