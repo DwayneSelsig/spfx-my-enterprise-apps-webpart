@@ -32,6 +32,51 @@ The webpart can be configured through the property pane with the following optio
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
+## Installation and Upgrades
+
+### Download or compile
+[Download the latest release](https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/releases) or compile the solution (`npm run build`). The `.sppkg` file will be in `sharepoint/solution/`.
+
+### Installation
+Go to the [SharePoint admin center → **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) → **Apps** → **Open** → **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
+
+### Upgrades
+Upload the new `.sppkg` file and overwrite the existing one when prompted.
+
+> **Note:** SharePoint add-ins are being retired, but SharePoint Framework (SPFx) solutions like this one are not affected and remain fully supported.
+
+For more information, see the SharePoint App Catalog documentation:
+https://learn.microsoft.com/sharepoint/use-app-catalog
+
+## Contributing
+
+We welcome contributions from the community! Here are some ways you can help:
+
+- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
+- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
+
+## Solution
+
+| Solution    | Author(s)                                               |
+| ----------- | ------------------------------------------------------- |
+| spfx-my-enterprise-apps-webpart | Dwayne Selsig |
+
+## Version history
+
+| Version | Date             | Comments        |
+| ------- | ---------------- | --------------- |
+| 0.5.0.0 | 2025-12-25          | Initial release |
+| 0.6.0.0 | 2026-01-01          | Added Microsoft Apps |
+| 0.6.1.0 | 2026-05-25       | Upgraded to SPFx 1.23.0 |
+| 0.7.0.0 | 2026-08-27       | Added end-user filtering and custom app sizing; updated SPFx packages and Copilot logo |
+| 0.8.0.0 | 2026-08-30       | Added app detail view, configurable default apps and property-pane toggles; improved default icons, Teams link and localization |
+| 0.8.1.0 | 2026-08-30       | Added Entra ID and PowerShell setup instructions; improved enterprise application selection and privacy handling |
+
+## Used SharePoint Framework Version
+
+![version](https://img.shields.io/badge/version-1.23.0-green.svg)
+
+
 ## Adding an app from Microsoft Entra ID
 
 This webpart displays the enterprise applications for which the current user has an app-role assignment. Creating an **App registration** by itself is therefore not enough: the app must have a corresponding **Enterprise application** (service principal) and the user, or a group of which the user is a direct member, must be assigned to it.
@@ -116,50 +161,6 @@ New-EntraGroupAppRoleAssignment `
 ```
 
 For an app with defined app roles, replace `[Guid]::Empty` with the ID of the role to assign. See the [enterprise-application properties](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/application-properties), [user/group assignment](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/assign-user-or-group-access-portal), and [Microsoft Entra PowerShell](https://learn.microsoft.com/en-us/powershell/entra-powershell/overview) documentation for details.
-
-## Installation and Upgrades
-
-### Download or compile
-[Download the latest release](https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/releases) or compile the solution (`npm run build`). The `.sppkg` file will be in `sharepoint/solution/`.
-
-### Installation
-Go to the [SharePoint admin center → **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) → **Apps** → **Open** → **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
-
-### Upgrades
-Upload the new `.sppkg` file and overwrite the existing one when prompted.
-
-> **Note:** SharePoint add-ins are being retired, but SharePoint Framework (SPFx) solutions like this one are not affected and remain fully supported.
-
-For more information, see the SharePoint App Catalog documentation:
-https://learn.microsoft.com/sharepoint/use-app-catalog
-
-## Contributing
-
-We welcome contributions from the community! Here are some ways you can help:
-
-- **Translations**: Help translate the webpart into additional languages. The current supported languages are English and Dutch. If you'd like to contribute translations, please submit a pull request with the updated localization files in the `loc` folder.
-- **Feature Suggestions**: Have an idea for a new feature or improvement? Please open an issue to share your suggestion. We'd love to hear about features you'd like to see in the Entra Enterprise Apps webpart.
-
-## Solution
-
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| spfx-my-enterprise-apps-webpart | Dwayne Selsig |
-
-## Version history
-
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 0.5.0.0 | 2025-12-25          | Initial release |
-| 0.6.0.0 | 2026-01-01          | Added Microsoft Apps |
-| 0.6.1.0 | 2026-05-25       | Upgraded to SPFx 1.23.0 |
-| 0.7.0.0 | 2026-08-27       | Added end-user filtering and custom app sizing; updated SPFx packages and Copilot logo |
-| 0.8.0.0 | 2026-08-30       | Added app detail view, configurable default apps and property-pane toggles; improved default icons, Teams link and localization |
-| 0.8.1.0 | 2026-08-30       | Added Entra ID and PowerShell setup instructions; improved enterprise application selection and privacy handling |
-
-## Used SharePoint Framework Version
-
-![version](https://img.shields.io/badge/version-1.23.0-green.svg)
 
 ## Applies to
 
