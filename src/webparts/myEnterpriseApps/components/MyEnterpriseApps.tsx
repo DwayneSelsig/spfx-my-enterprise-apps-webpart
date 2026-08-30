@@ -11,6 +11,30 @@ import type {
 import { defaultApps } from '../assets/DefaultApps';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
 
+interface IGraphPage<T> {
+  value?: T[];
+  '@odata.nextLink'?: string;
+}
+
+interface IGraphRequest<T> {
+  get(): Promise<IGraphPage<T>>;
+}
+
+interface IAppRoleAssignedTo {
+  principalId: string;
+  principalType: string;
+}
+
+interface IGraphBatchSubResponse {
+  id: string;
+  status: number;
+  body?: IGraphPage<IAppRoleAssignedTo>;
+}
+
+interface IGraphBatchResponse {
+  responses?: IGraphBatchSubResponse[];
+}
+
 export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsProps, IMyEnterpriseAppsState> {
   private readonly searchBoxRef = React.createRef<ISearchBox>();
   private detailTransitionTimer: number | undefined;
@@ -284,39 +308,67 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     try {
       const { graphClient } = this.props;
 
-      // Get app role assignments from Graph API
-      const response = await graphClient
-        .api('/me/appRoleAssignments')
-        .get();
+      // App role assignments remain the source of truth for apps available to
+      // the current user. Follow paging here as well because a user can have
+      // more assignments than one Graph page contains.
+      const assignments = await this.getAllGraphPages<IAppRoleAssignment>(
+        graphClient
+          .api('/me/appRoleAssignments')
+          .select('id,principalDisplayName,resourceDisplayName,resourceId')
+      );
+      const myAssignedResourceIds = new Set(assignments.map(assignment => assignment.resourceId));
 
-      const assignments: IAppRoleAssignment[] = response.value || [];
+      // Only these service principals are Enterprise Application candidates.
+      // In particular, ServiceIdentity (Entra Agent Identities) is excluded by
+      // the servicePrincipalType filter rather than by a name-based heuristic.
+      const integratedApps = await this.getAllGraphPages<IServicePrincipalInfo>(
+        graphClient
+          .api('/servicePrincipals')
+          .filter("servicePrincipalType eq 'Application' and tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')")
+          .select('id,appId,appOwnerOrganizationId,displayName,appDescription,notes,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
+          .top(999)
+      );
       const includeDefaults = this.props.showDefaultApps ?? true;
       const visibleDefaultAppKeys = includeDefaults
         ? this.props.visibleDefaultAppNames.map(appName => this.normalizeName(appName))
         : [];
       const defaultAppKeys = defaultApps.map(defaultApp => this.normalizeName(defaultApp.name));
 
-      // Build a Map with all apps (keyed by normalized name)
-      const allAppsMap = new Map<string, IAppData>();
-      
-      assignments.forEach(assignment => {
-        const defaultIcon = this.generateDefaultIcon(assignment.resourceDisplayName);
-        const key = this.normalizeName(assignment.resourceDisplayName);
+      const isSuppressedDefaultApp = (name: string): boolean => {
+        const key = this.normalizeName(name);
+        return defaultAppKeys.indexOf(key) !== -1 && visibleDefaultAppKeys.indexOf(key) === -1;
+      };
 
-        if (defaultAppKeys.indexOf(key) !== -1 && visibleDefaultAppKeys.indexOf(key) === -1) {
+      // Graph Enterprise Applications are keyed by servicePrincipal.id. This
+      // prevents a candidate that is both assigned and integrated from being
+      // added twice, while retaining name-based merging only for default apps.
+      const enterpriseAppsById = new Map<string, IAppData>();
+      const integratedAppsById = new Map<string, IServicePrincipalInfo>();
+      integratedApps.forEach(app => integratedAppsById.set(app.id, app));
+
+      assignments.forEach(assignment => {
+        if (isSuppressedDefaultApp(assignment.resourceDisplayName)) {
           return;
         }
 
-        allAppsMap.set(key, {
-          name: assignment.resourceDisplayName,
-          url: '',
-          iconUrl: defaultIcon,
-          resourceId: assignment.resourceId,
-          isHidden: false,
-          isLoaded: false,
-          isDefaultApp: false
-        });
+        const integratedApp = integratedAppsById.get(assignment.resourceId);
+        enterpriseAppsById.set(assignment.resourceId, integratedApp
+          ? this.createAppFromServicePrincipal(integratedApp)
+          : this.createAppFromAssignment(assignment));
       });
+
+      // Candidates which are already assigned do not need an assignment check.
+      // For every other candidate, only a successful, explicitly empty response
+      // qualifies it as unassigned; errors are intentionally fail-closed.
+      const candidatesNeedingAssignmentCheck = integratedApps.filter(app =>
+        !myAssignedResourceIds.has(app.id) && !isSuppressedDefaultApp(app.displayName || '')
+      );
+      const unassignedApps = await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
+      unassignedApps.forEach(app => {
+        enterpriseAppsById.set(app.id, this.createAppFromServicePrincipal(app));
+      });
+
+      const standaloneDefaultApps: IAppData[] = [];
 
       if (includeDefaults) {
         defaultApps.forEach(defaultApp => {
@@ -325,32 +377,39 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
           }
 
           const key = this.normalizeName(defaultApp.name);
-          const existing = allAppsMap.get(key);
-          const merged: IAppData = {
-            name: defaultApp.name,
-            url: defaultApp.url,
-            iconUrl: defaultApp.icon,
-            resourceId: existing?.resourceId || '',
-            isHidden: existing?.isHidden ?? false,
-            isLoaded: existing ? existing.isLoaded : true,
-            isDefaultApp: true
-          };
+          const existing = Array.from(enterpriseAppsById.values())
+            .find(app => this.normalizeName(app.name) === key);
 
           if (existing) {
-            allAppsMap.set(key, { ...existing, ...merged });
+            enterpriseAppsById.set(existing.resourceId, {
+              ...existing,
+              name: defaultApp.name,
+              url: defaultApp.url,
+              iconUrl: defaultApp.icon,
+              isDefaultApp: true
+            });
           } else {
-            allAppsMap.set(key, merged);
+            standaloneDefaultApps.push({
+              name: defaultApp.name,
+              url: defaultApp.url,
+              iconUrl: defaultApp.icon,
+              resourceId: '',
+              isHidden: false,
+              isLoaded: true,
+              isDefaultApp: true
+            });
           }
         });
       }
 
-      if (allAppsMap.size === 0) {
+      const allApps = Array.from(enterpriseAppsById.values()).concat(standaloneDefaultApps);
+      if (allApps.length === 0) {
         this.setState({ apps: [], isLoading: false });
         return;
       }
 
       // Sort apps according to custom logic
-      const appsArray = this.sortApps(allAppsMap);
+      const appsArray = this.sortApps(allApps);
 
       // Set initial state with sorted apps
       this.setState({ apps: appsArray });
@@ -367,14 +426,110 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     }
   }
 
+  private async getAllGraphPages<T>(initialRequest: IGraphRequest<T>): Promise<T[]> {
+    const values: T[] = [];
+    let response = await initialRequest.get();
+
+    while (true) {
+      values.push(...(response.value || []));
+      const nextLink = response['@odata.nextLink'];
+      if (!nextLink) {
+        return values;
+      }
+
+      response = await this.props.graphClient.api(nextLink).get() as IGraphPage<T>;
+    }
+  }
+
+  private createAppFromAssignment(assignment: IAppRoleAssignment): IAppData {
+    return {
+      name: assignment.resourceDisplayName,
+      url: '',
+      iconUrl: this.generateDefaultIcon(assignment.resourceDisplayName),
+      resourceId: assignment.resourceId,
+      isHidden: false,
+      isLoaded: false,
+      isDefaultApp: false
+    };
+  }
+
+  private createAppFromServicePrincipal(servicePrincipal: IServicePrincipalInfo): IAppData {
+    const name = servicePrincipal.displayName || servicePrincipal.appId;
+    return this.applyServicePrincipalDetails({
+      name,
+      url: '',
+      iconUrl: this.generateDefaultIcon(name),
+      resourceId: servicePrincipal.id,
+      isHidden: false,
+      isLoaded: false,
+      isDefaultApp: false
+    }, servicePrincipal);
+  }
+
+  private chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let index = 0; index < items.length; index += size) {
+      chunks.push(items.slice(index, index + size));
+    }
+    return chunks;
+  }
+
+  private async getUnassignedIntegratedApps(candidates: IServicePrincipalInfo[]): Promise<IServicePrincipalInfo[]> {
+    const unassignedApps: IServicePrincipalInfo[] = [];
+    const batchSize = 20;
+    let requestNumber = 0;
+
+    for (const candidateChunk of this.chunk(candidates, batchSize)) {
+      const requestIdToApp = new Map<string, IServicePrincipalInfo>();
+      const requests = candidateChunk.map(servicePrincipal => {
+        const id = `assignment-${requestNumber++}`;
+        requestIdToApp.set(id, servicePrincipal);
+        return {
+          id,
+          method: 'GET',
+          // $top=1 is sufficient: a single assignment means that the app must
+          // not be displayed, while an empty first page proves it is unassigned.
+          url: `/servicePrincipals/${encodeURIComponent(servicePrincipal.id)}/appRoleAssignedTo?$select=principalId,principalType&$top=1`
+        };
+      });
+
+      try {
+        const batchResponse = await this.props.graphClient
+          .api('/$batch')
+          .post({ requests }) as IGraphBatchResponse;
+        const responsesById = new Map<string, IGraphBatchSubResponse>();
+        (batchResponse.responses || []).forEach(response => responsesById.set(response.id, response));
+
+        requestIdToApp.forEach((servicePrincipal, requestId) => {
+          const response = responsesById.get(requestId);
+          const isSuccessful = response !== undefined && response.status >= 200 && response.status < 300;
+          const assignments = response?.body?.value;
+
+          if (isSuccessful && Array.isArray(assignments) && assignments.length === 0) {
+            unassignedApps.push(servicePrincipal);
+          } else if (!isSuccessful) {
+            console.warn(`Could not determine assignments for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
+          } else {
+            console.warn(`Received an incomplete assignment response for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
+          }
+        });
+      } catch (error) {
+        // A failed batch leaves the assignment state unknown, so all apps in
+        // this chunk remain hidden rather than risking exposure to other users.
+        candidateChunk.forEach(servicePrincipal => {
+          console.warn(`Could not determine assignments for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, error);
+        });
+      }
+    }
+
+    return unassignedApps;
+  }
+
   /**
    * Sort apps according to custom sort order and alphabetically
    */
-  private sortApps(appsMap: Map<string, IAppData>): IAppData[] {
-    const appsArray: IAppData[] = [];
-    appsMap.forEach((value) => {
-      appsArray.push(value);
-    });
+  private sortApps(apps: IAppData[]): IAppData[] {
+    const appsArray = apps.slice();
 
     // Parse custom sort order
     const customOrder: string[] = [];
@@ -440,28 +595,18 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
           return { ...app, isLoaded: true } as IAppData;
         }
 
+        // The integrated-app query already returned these details. Reuse them
+        // instead of issuing a redundant per-app request.
+        if (app.servicePrincipal) {
+          return this.applyServicePrincipalDetails(app, app.servicePrincipal);
+        }
+
         const spInfo: IServicePrincipalInfo = await graphClient
           .api(`/servicePrincipals/${app.resourceId}`)
           .select('id,appId,appOwnerOrganizationId,displayName,appDescription,notes,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
           .get();
 
-        // Construct login URL
-        const loginUrl = spInfo.appOwnerOrganizationId
-          ? `https://launcher.myapps.microsoft.com/api/signin/${spInfo.appId}?tenantId=${spInfo.appOwnerOrganizationId}`
-          : app.url;
-
-        // Check if app has HideApp tag
-        const hasHideAppTag = spInfo.tags && Array.isArray(spInfo.tags) && spInfo.tags.indexOf('HideApp') !== -1;
-
-        // Update app data
-        return {
-          ...app,
-          url: app.isDefaultApp ? app.url : loginUrl,
-          iconUrl: spInfo.info?.logoUrl || app.iconUrl,
-          isHidden: hasHideAppTag === true,
-          isLoaded: true,
-          servicePrincipal: spInfo
-        } as IAppData;
+        return this.applyServicePrincipalDetails(app, spInfo);
       } catch (error) {
         console.warn(`Could not load details for ${app.name}:`, error);
         return { ...app, isLoaded: true };
@@ -470,12 +615,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
     const results = await Promise.all(loadPromises);
 
-    // Deduplicate by normalized name to avoid double-defaults during rapid refreshes
-    const uniqueByName = new Map<string, IAppData>();
-    results.forEach(app => {
-      uniqueByName.set(this.normalizeName(app.name), app);
-    });
-    const dedupedApps = Array.from(uniqueByName.values());
+    // Enterprise Applications were already deduplicated by servicePrincipal.id
+    // before detail loading. Do not collapse distinct Graph resources merely
+    // because they happen to share a display name.
+    const dedupedApps = results;
     
     // Filter apps based on showHiddenApps setting
     const filteredApps = showHiddenApps 
@@ -483,6 +626,22 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       : dedupedApps.filter(app => !app.isHidden);
 
     this.setState({ apps: filteredApps }, this.openDetailForExactMatch);
+  }
+
+  private applyServicePrincipalDetails(app: IAppData, servicePrincipal: IServicePrincipalInfo): IAppData {
+    const loginUrl = servicePrincipal.appOwnerOrganizationId
+      ? `https://launcher.myapps.microsoft.com/api/signin/${servicePrincipal.appId}?tenantId=${servicePrincipal.appOwnerOrganizationId}`
+      : app.url;
+    const hasHideAppTag = Array.isArray(servicePrincipal.tags) && servicePrincipal.tags.indexOf('HideApp') !== -1;
+
+    return {
+      ...app,
+      url: app.isDefaultApp ? app.url : loginUrl,
+      iconUrl: servicePrincipal.info?.logoUrl || app.iconUrl,
+      isHidden: hasHideAppTag,
+      isLoaded: true,
+      servicePrincipal
+    };
   }
 
   /**
