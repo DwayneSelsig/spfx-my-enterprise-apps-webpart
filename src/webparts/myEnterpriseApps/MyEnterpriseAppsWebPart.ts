@@ -5,6 +5,7 @@ import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField,
   PropertyPaneCheckbox,
+  PropertyPaneToggle,
   PropertyPaneDropdown,
   PropertyPaneSlider
 } from '@microsoft/sp-property-pane';
@@ -244,10 +245,13 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
               ]
             },
             {
-              groupName: strings.DetailViewGroupName,
+              isGroupNameHidden: true,
               groupFields: [
-                PropertyPaneCheckbox('enableDetailView', {
-                  text: strings.EnableDetailViewLabel
+                PropertyPaneToggle('enableDetailView', {
+                  label: strings.DetailViewGroupName,
+                  inlineLabel: true,
+                  checked: this.properties.enableDetailView !== false,
+                  ariaLabel: strings.EnableDetailViewLabel
                 }),
                 PropertyPaneCheckbox('displayInternalNotes', {
                   text: strings.DisplayInternalNotesLabel,
@@ -272,11 +276,13 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
               ]
             },
             {
-              groupName: strings.DefaultAppsGroupName,
+              isGroupNameHidden: true,
               groupFields: [
-                PropertyPaneCheckbox('showDefaultApps', {
-                  text: strings.ShowDefaultAppsLabel,
-                  checked: this.properties.showDefaultApps !== false
+                PropertyPaneToggle('showDefaultApps', {
+                  label: strings.DefaultAppsGroupName,
+                  inlineLabel: true,
+                  checked: this.properties.showDefaultApps !== false,
+                  ariaLabel: strings.ShowDefaultAppsLabel
                 }),
                 ...defaultApps.map(defaultApp => PropertyPaneCheckbox(
                   `defaultAppVisibility.${this.getDefaultAppVisibilityKey(defaultApp.name)}`,
