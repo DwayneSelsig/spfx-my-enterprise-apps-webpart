@@ -13,6 +13,8 @@ import * as strings from 'MyEnterpriseAppsWebPartStrings';
 
 export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsProps, IMyEnterpriseAppsState> {
   private readonly searchBoxRef = React.createRef<ISearchBox>();
+  private detailTransitionTimer: number | undefined;
+  private detailRequestId = 0;
   
   constructor(props: IMyEnterpriseAppsProps) {
     super(props);
@@ -21,8 +23,16 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       isLoading: true,
       error: undefined,
       filterQuery: '',
-      isFilterOpen: false
+      isFilterOpen: false,
+      selectedApp: undefined,
+      isDetailTransitioning: false,
+      isDetailDismissed: false
     };
+  }
+
+  public componentWillUnmount(): void {
+    this.cancelDetailTransition();
+    this.detailRequestId++;
   }
 
   public componentDidMount(): void {
@@ -37,6 +47,13 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     if (prevProps.sortOrder !== this.props.sortOrder ||
         prevProps.showHiddenApps !== this.props.showHiddenApps ||
         prevProps.showDefaultApps !== this.props.showDefaultApps) {
+      this.cancelDetailTransition();
+      this.detailRequestId++;
+      this.setState({
+        selectedApp: undefined,
+        isDetailTransitioning: false,
+        isDetailDismissed: false
+      });
       this.loadApps().catch(error => {
         console.error('Error loading apps:', error);
         this.setState({ error: error.message, isLoading: false });
@@ -63,7 +80,15 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   };
 
   private closeFilter = (): void => {
-    this.setState({ filterQuery: '', isFilterOpen: false });
+    this.cancelDetailTransition();
+    this.detailRequestId++;
+    this.setState({
+      filterQuery: '',
+      isFilterOpen: false,
+      selectedApp: undefined,
+      isDetailTransitioning: false,
+      isDetailDismissed: false
+    });
   };
 
   private onFilterEscape = (event?: { preventDefault: () => void; stopPropagation: () => void }): void => {
@@ -73,7 +98,72 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   };
 
   private onFilterChange = (_event?: React.ChangeEvent<HTMLInputElement>, newValue?: string): void => {
-    this.setState({ filterQuery: newValue || '' });
+    this.cancelDetailTransition();
+    this.detailRequestId++;
+    this.setState({
+      filterQuery: newValue || '',
+      selectedApp: undefined,
+      isDetailTransitioning: false,
+      isDetailDismissed: false
+    }, this.openDetailForExactMatch);
+  };
+
+  private cancelDetailTransition(): void {
+    if (this.detailTransitionTimer !== undefined) {
+      window.clearTimeout(this.detailTransitionTimer);
+      this.detailTransitionTimer = undefined;
+    }
+  }
+
+  private prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  private getFilteredApps(query: string = this.state.filterQuery): IAppData[] {
+    const normalizedQuery = this.normalizeName(query);
+    return normalizedQuery
+      ? this.state.apps.filter(app => this.normalizeName(app.name).indexOf(normalizedQuery) !== -1)
+      : this.state.apps;
+  }
+
+  private openDetailForExactMatch = (): void => {
+    const { isLoading, isDetailDismissed } = this.state;
+    const hasSearchQuery = this.normalizeName(this.state.filterQuery).length > 0;
+    const matchingApps = this.getFilteredApps();
+
+    if (isLoading || isDetailDismissed || !hasSearchQuery || matchingApps.length !== 1) {
+      return;
+    }
+
+    const selectedApp = matchingApps[0];
+    const showDetail = (): void => {
+      this.detailTransitionTimer = undefined;
+      this.setState({
+        selectedApp,
+        isDetailTransitioning: false,
+        isDetailDismissed: false
+      });
+    };
+
+    if (this.prefersReducedMotion()) {
+      showDetail();
+      return;
+    }
+
+    this.setState({ isDetailTransitioning: true });
+    this.detailTransitionTimer = window.setTimeout(showDetail, 160);
+  };
+
+  private returnToResults = (): void => {
+    this.cancelDetailTransition();
+    this.detailRequestId++;
+    this.setState({
+      selectedApp: undefined,
+      isDetailTransitioning: false,
+      isDetailDismissed: true
+    });
   };
 
   /**
@@ -150,7 +240,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       throw error;
     }
     finally {
-      this.setState({ isLoading: false });
+      this.setState({ isLoading: false }, this.openDetailForExactMatch);
     }
   }
 
@@ -229,11 +319,13 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
         const spInfo: IServicePrincipalInfo = await graphClient
           .api(`/servicePrincipals/${app.resourceId}`)
-          .select('appId,appOwnerOrganizationId,info,tags')
+          .select('id,appId,appOwnerOrganizationId,displayName,appDescription,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
           .get();
 
         // Construct login URL
-        const loginUrl = `https://launcher.myapps.microsoft.com/api/signin/${spInfo.appId}?tenantId=${spInfo.appOwnerOrganizationId}`;
+        const loginUrl = spInfo.appOwnerOrganizationId
+          ? `https://launcher.myapps.microsoft.com/api/signin/${spInfo.appId}?tenantId=${spInfo.appOwnerOrganizationId}`
+          : app.url;
 
         // Check if app has HideApp tag
         const hasHideAppTag = spInfo.tags && Array.isArray(spInfo.tags) && spInfo.tags.indexOf('HideApp') !== -1;
@@ -244,7 +336,8 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
           url: app.isDefaultApp ? app.url : loginUrl,
           iconUrl: spInfo.info?.logoUrl || app.iconUrl,
           isHidden: hasHideAppTag === true,
-          isLoaded: true
+          isLoaded: true,
+          servicePrincipal: spInfo
         } as IAppData;
       } catch (error) {
         console.warn(`Could not load details for ${app.name}:`, error);
@@ -266,7 +359,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       ? dedupedApps 
       : dedupedApps.filter(app => !app.isHidden);
 
-    this.setState({ apps: filteredApps });
+    this.setState({ apps: filteredApps }, this.openDetailForExactMatch);
   }
 
   /**
@@ -319,9 +412,122 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     );
   }
 
+  private renderUnavailable(): React.ReactElement {
+    return <p className={styles.notAvailable}>{strings.NotAvailable}</p>;
+  }
+
+  private getSsoLabel(mode: string | undefined): string | undefined {
+    if (!mode) {
+      return undefined;
+    }
+
+    const labels: { [key: string]: string } = {
+      saml: 'SAML',
+      password: strings.PasswordSso,
+      oidc: 'OpenID Connect',
+      linked: strings.LinkedSso,
+      notSupported: strings.SsoNotSupported
+    };
+    return labels[mode] || mode;
+  }
+
+  private renderOAuthScopes(servicePrincipal: IServicePrincipalInfo | undefined): React.ReactElement {
+    const scopes = (servicePrincipal?.oauth2PermissionScopes || []).filter(scope => scope.isEnabled !== false);
+
+    return (
+      <section className={styles.detailSection}>
+        <h3>{strings.OAuthScopes}</h3>
+        {scopes.length === 0 ? this.renderUnavailable() : (
+          <ul className={styles.scopesList}>
+            {scopes.map(scope => (
+              <li key={scope.id || scope.value}>
+                <span className={styles.scopeName}>{scope.value}</span>
+                {(scope.userConsentDescription || scope.adminConsentDescription) && (
+                  <span className={styles.scopeDescription}>
+                    {scope.userConsentDescription || scope.adminConsentDescription}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
+  private renderAppDetail(app: IAppData): React.ReactElement {
+    const servicePrincipal = app.servicePrincipal;
+    const publisher = servicePrincipal?.publisherName;
+    const verifiedPublisher = servicePrincipal?.verifiedPublisher?.displayName;
+    const ssoMode = this.getSsoLabel(servicePrincipal?.preferredSingleSignOnMode);
+    const termsUrl = servicePrincipal?.info?.termsOfServiceUrl;
+    const homepage = servicePrincipal?.homepage;
+
+    return (
+      <div className={styles.detailView} aria-live="polite">
+        <div className={styles.detailToolbar}>
+          <IconButton
+            iconProps={{ iconName: 'Back' }}
+            ariaLabel={strings.BackToResults}
+            title={strings.BackToResults}
+            onClick={this.returnToResults}
+          />
+          <button type="button" className={styles.backButton} onClick={this.returnToResults}>
+            {strings.BackToResults}
+          </button>
+        </div>
+
+        <article className={styles.detailCard}>
+          <header className={styles.detailHeader}>
+            <div className={styles.detailIdentity}>
+              <div className={styles.detailIcon}>
+                <img src={app.iconUrl} alt={app.name} />
+              </div>
+              <div>
+                <h2>{servicePrincipal?.displayName || app.name}</h2>
+                {publisher && <p className={styles.publisher}>{publisher}</p>}
+                {verifiedPublisher && <p className={styles.verifiedPublisher}>{strings.VerifiedPublisher}: {verifiedPublisher}</p>}
+              </div>
+            </div>
+            {app.url && (
+              <a className={styles.openAppButton} href={app.url} target="_blank" rel="noopener noreferrer">
+                {strings.OpenApp}
+              </a>
+            )}
+          </header>
+
+          <div className={styles.metadata}>
+            <div><span>{strings.AppId}</span><code>{servicePrincipal?.appId || strings.NotAvailable}</code></div>
+            <div><span>{strings.ServicePrincipalId}</span><code>{app.resourceId || strings.NotAvailable}</code></div>
+            {homepage && <div><span>{strings.Homepage}</span><a href={homepage} target="_blank" rel="noopener noreferrer">{homepage}</a></div>}
+          </div>
+
+          <div className={styles.detailSections}>
+            <section className={styles.detailSection}>
+              <h3>{strings.Description}</h3>
+              {servicePrincipal?.appDescription ? <p>{servicePrincipal.appDescription}</p> : this.renderUnavailable()}
+            </section>
+
+            <section className={styles.detailSection}>
+              <h3>{strings.SingleSignOn}</h3>
+              {ssoMode ? <p>{ssoMode}</p> : this.renderUnavailable()}
+            </section>
+
+            <section className={styles.detailSection}>
+              <h3>{strings.TermsOfService}</h3>
+              {termsUrl ? <a href={termsUrl} target="_blank" rel="noopener noreferrer">{strings.OpenTermsOfService}</a> : this.renderUnavailable()}
+            </section>
+
+            {this.renderOAuthScopes(servicePrincipal)}
+          </div>
+        </article>
+      </div>
+    );
+  }
+
   public render(): React.ReactElement<IMyEnterpriseAppsProps> {
     const { title, hasTeamsContext, iconSize, textSize, appSpacing } = this.props;
-    const { apps, isLoading, error, filterQuery, isFilterOpen } = this.state;
+    const { apps, isLoading, error, filterQuery, isFilterOpen, selectedApp, isDetailTransitioning } = this.state;
     const displayTitle = title || strings.DefaultTitle;
     const normalizedFilterQuery = this.normalizeName(filterQuery);
     const filteredApps = normalizedFilterQuery
@@ -382,29 +588,31 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
             )}
           </div>
           
-          <div className={styles.appsList}>
-            {error && (
-              <div className={styles.errorMessage}>
-                {strings.ErrorLoading}: {error}
-              </div>
-            )}
-            
-            {isLoading && this.renderSkeletonItems()}
-            
-            {!isLoading && !error && hasNoSearchResults && (
-              <div className={styles.noAppsMessage}>
-                {strings.NoFilterResults}
-              </div>
-            )}
+          {selectedApp ? this.renderAppDetail(selectedApp) : (
+            <div className={`${styles.appsList}${isDetailTransitioning ? ` ${styles.appsListFading}` : ''}`}>
+              {error && (
+                <div className={styles.errorMessage}>
+                  {strings.ErrorLoading}: {error}
+                </div>
+              )}
 
-            {!isLoading && !error && !hasNoSearchResults && apps.length === 0 && (
-              <div className={styles.noAppsMessage}>
-                {strings.NoAppsFound}
-              </div>
-            )}
-            
-            {!isLoading && !error && !hasNoSearchResults && filteredApps.map(app => this.renderAppItem(app))}
-          </div>
+              {isLoading && this.renderSkeletonItems()}
+
+              {!isLoading && !error && hasNoSearchResults && (
+                <div className={styles.noAppsMessage}>
+                  {strings.NoFilterResults}
+                </div>
+              )}
+
+              {!isLoading && !error && !hasNoSearchResults && apps.length === 0 && (
+                <div className={styles.noAppsMessage}>
+                  {strings.NoAppsFound}
+                </div>
+              )}
+
+              {!isLoading && !error && !hasNoSearchResults && filteredApps.map(app => this.renderAppItem(app))}
+            </div>
+          )}
         </div>
       </section>
     );

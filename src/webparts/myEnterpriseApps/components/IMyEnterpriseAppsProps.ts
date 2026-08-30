@@ -24,6 +24,9 @@ export interface IMyEnterpriseAppsState {
   error: string | undefined;
   filterQuery: string;
   isFilterOpen: boolean;
+  selectedApp: IAppData | undefined;
+  isDetailTransitioning: boolean;
+  isDetailDismissed: boolean;
 }
 
 /**
@@ -40,12 +43,34 @@ export interface IAppRoleAssignment {
  * Interface for service principal information from Graph API
  */
 export interface IServicePrincipalInfo {
+  id: string;
   appId: string;
-  appOwnerOrganizationId: string;
+  appOwnerOrganizationId?: string;
+  displayName?: string;
+  appDescription?: string;
+  homepage?: string;
+  publisherName?: string;
+  preferredSingleSignOnMode?: string;
   tags?: string[];
-  info: {
-    logoUrl: string | undefined;
+  verifiedPublisher?: {
+    displayName?: string;
+    verifiedPublisherId?: string;
   };
+  info?: {
+    logoUrl: string | undefined;
+    termsOfServiceUrl?: string;
+  };
+  oauth2PermissionScopes?: IAppPermissionScope[];
+}
+
+export interface IAppPermissionScope {
+  id: string;
+  value: string;
+  isEnabled?: boolean;
+  adminConsentDisplayName?: string;
+  adminConsentDescription?: string;
+  userConsentDisplayName?: string;
+  userConsentDescription?: string;
 }
 
 /**
@@ -59,4 +84,5 @@ export interface IAppData {
   isHidden: boolean;
   isLoaded: boolean;
   isDefaultApp?: boolean;
+  servicePrincipal?: IServicePrincipalInfo;
 }
