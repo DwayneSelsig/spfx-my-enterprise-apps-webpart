@@ -7,6 +7,7 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   SortOrderFieldDescription: string;
   ShowHiddenAppsLabel: string;
   ShowDefaultAppsLabel: string;
+  DefaultAppsGroupName: string;
   DisplayInternalNotesLabel: string;
   DisplayAppIdentifiersLabel: string;
   DisplayOAuthScopesLabel: string;

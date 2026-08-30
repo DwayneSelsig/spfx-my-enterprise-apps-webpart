@@ -8,6 +8,7 @@ define([], function() {
     "SortOrderFieldDescription": "Voer trefwoorden voor app-namen in (één per regel) om prioriteit te geven. Apps die overeenkomen met deze termen verschijnen eerst in de opgegeven volgorde.",
     "ShowHiddenAppsLabel": "Toon verborgen apps (semi-transparant)",
     "ShowDefaultAppsLabel": "Toon standaardapps",
+    "DefaultAppsGroupName": "Standaardapps",
     "DisplayInternalNotesLabel": "Interne notities weergeven",
     "DisplayAppIdentifiersLabel": "App-id en service principal-id weergeven",
     "DisplayOAuthScopesLabel": "OAuth-scopes weergeven",

@@ -8,6 +8,7 @@ export interface IMyEnterpriseAppsProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
+  visibleDefaultAppNames: string[];
   displayInternalNotes: boolean;
   displayAppIdentifiers: boolean;
   displayOAuthScopes: boolean;

@@ -14,6 +14,7 @@ import { MSGraphClientV3 } from '@microsoft/sp-http';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
 import MyEnterpriseApps from './components/MyEnterpriseApps';
 import { IMyEnterpriseAppsProps } from './components/IMyEnterpriseAppsProps';
+import { defaultApps } from './assets/DefaultApps';
 
 type LayoutPreset = 'small' | 'normal' | 'large' | 'huge';
 type LayoutPresetSelection = LayoutPreset | 'custom';
@@ -26,6 +27,7 @@ export interface IMyEnterpriseAppsWebPartProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
+  defaultAppVisibility?: Record<string, boolean>;
   displayInternalNotes?: boolean;
   displayAppIdentifiers?: boolean;
   displayOAuthScopes?: boolean;
@@ -108,6 +110,21 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
     return this.properties.layoutPreset || 'custom';
   }
 
+  private getDefaultAppVisibilityKey(appName: string): string {
+    return appName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  private isDefaultAppVisible(appName: string): boolean {
+    const key = this.getDefaultAppVisibilityKey(appName);
+    return this.properties.defaultAppVisibility?.[key] !== false;
+  }
+
+  private getVisibleDefaultAppNames(): string[] {
+    return defaultApps
+      .filter(defaultApp => this.isDefaultAppVisible(defaultApp.name))
+      .map(defaultApp => defaultApp.name);
+  }
+
   protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: unknown, newValue: unknown): void {
     if (propertyPath === 'layoutPreset' && newValue !== 'custom') {
       const preset = newValue as LayoutPreset;
@@ -135,6 +152,7 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         sortOrder: this.properties.sortOrder,
         showHiddenApps: this.properties.showHiddenApps,
         showDefaultApps: this.properties.showDefaultApps,
+        visibleDefaultAppNames: this.getVisibleDefaultAppNames(),
         displayInternalNotes: !!this.properties.displayInternalNotes,
         displayAppIdentifiers: this.properties.displayAppIdentifiers !== false,
         displayOAuthScopes: this.properties.displayOAuthScopes !== false,
@@ -187,12 +205,6 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   description: strings.SortOrderFieldDescription,
                   multiline: true,
                   rows: 5
-                }),
-                PropertyPaneCheckbox('showDefaultApps', {
-                  text: strings.ShowDefaultAppsLabel
-                }),
-                PropertyPaneCheckbox('showHiddenApps', {
-                  text: strings.ShowHiddenAppsLabel
                 }),
                 PropertyPaneDropdown('layoutPreset', {
                   label: strings.LayoutPresetFieldLabel,
@@ -249,6 +261,31 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   text: strings.DisplayOAuthScopesLabel,
                   disabled: this.properties.enableDetailView === false
                 })
+              ]
+            },
+            {
+              isGroupNameHidden: true,
+              groupFields: [
+                PropertyPaneCheckbox('showHiddenApps', {
+                  text: strings.ShowHiddenAppsLabel
+                })
+              ]
+            },
+            {
+              groupName: strings.DefaultAppsGroupName,
+              groupFields: [
+                PropertyPaneCheckbox('showDefaultApps', {
+                  text: strings.ShowDefaultAppsLabel,
+                  checked: this.properties.showDefaultApps !== false
+                }),
+                ...defaultApps.map(defaultApp => PropertyPaneCheckbox(
+                  `defaultAppVisibility.${this.getDefaultAppVisibilityKey(defaultApp.name)}`,
+                  {
+                    text: defaultApp.name,
+                    checked: this.isDefaultAppVisible(defaultApp.name),
+                    disabled: this.properties.showDefaultApps === false
+                  }
+                ))
               ]
             }
           ]

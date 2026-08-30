@@ -57,10 +57,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       this.openDetailForExactMatch();
     }
 
-    // Reload if sort order or showHiddenApps changes
+    // Reload if sorting, app visibility, or default app selection changes
     if (prevProps.sortOrder !== this.props.sortOrder ||
         prevProps.showHiddenApps !== this.props.showHiddenApps ||
-        prevProps.showDefaultApps !== this.props.showDefaultApps) {
+        prevProps.showDefaultApps !== this.props.showDefaultApps ||
+        prevProps.visibleDefaultAppNames.join('|') !== this.props.visibleDefaultAppNames.join('|')) {
       this.cancelDetailTransition();
       this.detailRequestId++;
       this.setState({
@@ -289,6 +290,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         .get();
 
       const assignments: IAppRoleAssignment[] = response.value || [];
+      const includeDefaults = this.props.showDefaultApps ?? true;
+      const visibleDefaultAppKeys = includeDefaults
+        ? this.props.visibleDefaultAppNames.map(appName => this.normalizeName(appName))
+        : [];
+      const defaultAppKeys = defaultApps.map(defaultApp => this.normalizeName(defaultApp.name));
 
       // Build a Map with all apps (keyed by normalized name)
       const allAppsMap = new Map<string, IAppData>();
@@ -296,6 +302,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       assignments.forEach(assignment => {
         const defaultIcon = this.generateDefaultIcon(assignment.resourceDisplayName);
         const key = this.normalizeName(assignment.resourceDisplayName);
+
+        if (defaultAppKeys.indexOf(key) !== -1 && visibleDefaultAppKeys.indexOf(key) === -1) {
+          return;
+        }
+
         allAppsMap.set(key, {
           name: assignment.resourceDisplayName,
           url: '',
@@ -307,10 +318,12 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         });
       });
 
-      const includeDefaults = this.props.showDefaultApps ?? true;
-
       if (includeDefaults) {
         defaultApps.forEach(defaultApp => {
+          if (this.props.visibleDefaultAppNames.indexOf(defaultApp.name) === -1) {
+            return;
+          }
+
           const key = this.normalizeName(defaultApp.name);
           const existing = allAppsMap.get(key);
           const merged: IAppData = {

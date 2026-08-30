@@ -8,6 +8,7 @@ define([], function() {
     "SortOrderFieldDescription": "Enter app name keywords (one per line) to prioritize. Apps matching these terms will appear first in the specified order.",
     "ShowHiddenAppsLabel": "Show hidden apps (semi-transparent)",
     "ShowDefaultAppsLabel": "Show default apps",
+    "DefaultAppsGroupName": "Default apps",
     "DisplayInternalNotesLabel": "Display internal notes",
     "DisplayAppIdentifiersLabel": "Display app ID and service principal ID",
     "DisplayOAuthScopesLabel": "Display OAuth scopes",
