@@ -11,6 +11,8 @@
     "node": ">=22.14.0 < 23.0.0"
   },
   "scripts": {
+    "generate:default-apps": "python tools/default-app-icons/replace_images.py",
+    "test:default-apps": "python -m unittest tools/default-app-icons/test_replace_images.py",
     "build": "heft test --clean --production && heft package-solution --production",
     "start": "heft start --clean",
     "clean": "heft clean",

@@ -27,6 +27,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Setup latest Python 3
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+          check-latest: true
+
       # Extract version from release tag
       # npm requires semantic versioning (major.minor.patch)
       # SharePoint requires 4-part versioning (major.minor.patch.build)
@@ -46,6 +52,9 @@ jobs:
       - name: Update package-solution.json version
         run: |
           jq ".solution.version = \"${{ steps.version.outputs.sharepoint_version }}\"" config/package-solution.json > config/package-solution.json.tmp && mv config/package-solution.json.tmp config/package-solution.json
+
+      - name: Generate default app icons
+        run: npm run generate:default-apps
 
       # BUILD (build step includes bundling the solution using the SPFx Heft toolchain, which prepares the package for deployment to SharePoint.)
       - name: Build and package solution (production)
