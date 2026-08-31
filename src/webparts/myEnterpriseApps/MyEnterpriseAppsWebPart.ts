@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
-import { Version } from '@microsoft/sp-core-library';
+import { DisplayMode, Version } from '@microsoft/sp-core-library';
 import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField,
@@ -16,6 +16,9 @@ import * as strings from 'MyEnterpriseAppsWebPartStrings';
 import MyEnterpriseApps from './components/MyEnterpriseApps';
 import { IMyEnterpriseAppsProps } from './components/IMyEnterpriseAppsProps';
 import { defaultApps } from './assets/DefaultApps';
+import {
+  normalizeCacheDuration
+} from './components/EnterpriseAppsCache';
 
 type LayoutPreset = 'small' | 'normal' | 'large' | 'huge';
 type LayoutPresetSelection = LayoutPreset | 'custom';
@@ -28,6 +31,8 @@ export interface IMyEnterpriseAppsWebPartProps {
   sortOrder: string;
   showHiddenApps: boolean;
   showDefaultApps: boolean;
+  enableCache?: boolean;
+  cacheDurationMinutes?: number;
   defaultAppVisibility?: Record<string, boolean>;
   displayInternalNotes?: boolean;
   displayAppIdentifiers?: boolean;
@@ -41,6 +46,7 @@ export interface IMyEnterpriseAppsWebPartProps {
 
 export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEnterpriseAppsWebPartProps> {
   private graphClient!: MSGraphClientV3;
+  private isPropertyPaneOpen = false;
 
   private static readonly defaultIconSize: number = 48;
   private static readonly defaultTextSize: number = 11;
@@ -105,6 +111,35 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
     if (typeof this.properties.enableDetailView !== 'boolean') {
       this.properties.enableDetailView = true;
     }
+    if (typeof this.properties.enableCache !== 'boolean') {
+      this.properties.enableCache = true;
+    }
+    this.properties.cacheDurationMinutes = normalizeCacheDuration(this.properties.cacheDurationMinutes);
+  }
+
+  private getAadContextId(value: unknown): string | undefined {
+    try {
+      if (typeof value === 'string') {
+        return value.trim() || undefined;
+      }
+
+      if (value && typeof value === 'object' && typeof (value as { toString?: unknown }).toString === 'function') {
+        const stringValue = (value as { toString: () => string }).toString().trim();
+        return stringValue && stringValue !== '[object Object]' ? stringValue : undefined;
+      }
+    } catch (error) {
+      console.warn('Could not read an Azure Active Directory context identifier; browser caching is disabled.', error);
+    }
+
+    return undefined;
+  }
+
+  private getTenantId(): string | undefined {
+    return this.getAadContextId(this.context.pageContext.aadInfo?.tenantId);
+  }
+
+  private getUserId(): string | undefined {
+    return this.getAadContextId(this.context.pageContext.aadInfo?.userId);
   }
 
   private getSelectedLayoutPreset(): LayoutPresetSelection {
@@ -145,6 +180,18 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
     this.context.propertyPane.refresh();
   }
 
+  protected onPropertyPaneConfigurationStart(): void {
+    super.onPropertyPaneConfigurationStart();
+    this.isPropertyPaneOpen = true;
+    this.render();
+  }
+
+  protected onPropertyPaneConfigurationComplete(): void {
+    this.isPropertyPaneOpen = false;
+    super.onPropertyPaneConfigurationComplete();
+    this.render();
+  }
+
   public render(): void {
     const element: React.ReactElement<IMyEnterpriseAppsProps> = React.createElement(
       MyEnterpriseApps,
@@ -154,6 +201,12 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         showHiddenApps: this.properties.showHiddenApps,
         showDefaultApps: this.properties.showDefaultApps,
         visibleDefaultAppNames: this.getVisibleDefaultAppNames(),
+        enableCache: this.properties.enableCache !== false,
+        cacheDurationMinutes: normalizeCacheDuration(this.properties.cacheDurationMinutes),
+        tenantId: this.getTenantId(),
+        userId: this.getUserId(),
+        isPropertyPaneOpen: this.isPropertyPaneOpen,
+        isEditMode: this.displayMode === DisplayMode.Edit,
         displayInternalNotes: !!this.properties.displayInternalNotes,
         displayAppIdentifiers: this.properties.displayAppIdentifiers !== false,
         displayOAuthScopes: this.properties.displayOAuthScopes !== false,
@@ -241,6 +294,27 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   step: 2,
                   value: this.properties.appSpacing,
                   showValue: false
+                })
+              ]
+            },
+            {
+              groupName: strings.CacheGroupName,
+              groupFields: [
+                PropertyPaneToggle('enableCache', {
+                  label: strings.EnableCacheLabel,
+                  inlineLabel: true,
+                  checked: this.properties.enableCache !== false,
+                  ariaLabel: strings.EnableCacheLabel
+                }),
+                PropertyPaneSlider('cacheDurationMinutes', {
+                  label: strings.CacheDurationFieldLabel,
+                  min: 5,
+                  max: 1440,
+                  step: 5,
+                  value: normalizeCacheDuration(this.properties.cacheDurationMinutes),
+                  showValue: true,
+                  disabled: this.properties.enableCache === false,
+                  ariaLabel: strings.CacheDurationFieldLabel
                 })
               ]
             },

@@ -9,6 +9,12 @@ export interface IMyEnterpriseAppsProps {
   showHiddenApps: boolean;
   showDefaultApps: boolean;
   visibleDefaultAppNames: string[];
+  enableCache: boolean;
+  cacheDurationMinutes: number;
+  tenantId: string | undefined;
+  userId: string | undefined;
+  isPropertyPaneOpen: boolean;
+  isEditMode: boolean;
   displayInternalNotes: boolean;
   displayAppIdentifiers: boolean;
   displayOAuthScopes: boolean;

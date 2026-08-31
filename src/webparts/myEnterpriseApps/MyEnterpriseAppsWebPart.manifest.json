@@ -22,6 +22,8 @@
       "sortOrder": "",
       "showHiddenApps": false,
       "showDefaultApps": true,
+      "enableCache": true,
+      "cacheDurationMinutes": 30,
       "defaultAppVisibility": {},
       "displayInternalNotes": false,
       "displayAppIdentifiers": true,

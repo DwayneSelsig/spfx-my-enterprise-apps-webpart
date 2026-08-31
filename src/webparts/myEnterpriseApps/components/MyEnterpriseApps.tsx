@@ -10,6 +10,13 @@ import type {
 } from './IMyEnterpriseAppsProps';
 import { defaultApps } from '../assets/DefaultApps';
 import * as strings from 'MyEnterpriseAppsWebPartStrings';
+import {
+  EnterpriseAppsCache,
+  getEnterpriseAppsCacheKey,
+  getEnterpriseAppsCacheSignature,
+  type IEnterpriseAppsCacheConfiguration,
+  normalizeCacheDuration
+} from './EnterpriseAppsCache';
 
 interface IGraphPage<T> {
   value?: T[];
@@ -35,10 +42,22 @@ interface IGraphBatchResponse {
   responses?: IGraphBatchSubResponse[];
 }
 
+interface IUnassignedAppsResult {
+  apps: IServicePrincipalInfo[];
+  isComplete: boolean;
+}
+
+interface ILoadedAppsResult {
+  apps: IAppData[];
+  isComplete: boolean;
+}
+
 export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsProps, IMyEnterpriseAppsState> {
   private readonly searchBoxRef = React.createRef<ISearchBox>();
+  private readonly cache = new EnterpriseAppsCache();
   private detailTransitionTimer: number | undefined;
   private detailRequestId = 0;
+  private loadRequestId = 0;
   
   constructor(props: IMyEnterpriseAppsProps) {
     super(props);
@@ -58,12 +77,12 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   public componentWillUnmount(): void {
     this.cancelDetailTransition();
     this.detailRequestId++;
+    this.loadRequestId++;
   }
 
   public componentDidMount(): void {
     this.loadApps().catch(error => {
-      console.error('Error loading apps:', error);
-      this.setState({ error: error.message, isLoading: false });
+      this.handleLoadError(error);
     });
   }
 
@@ -81,24 +100,91 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       this.openDetailForExactMatch();
     }
 
-    // Reload if sorting, app visibility, or default app selection changes
-    if (prevProps.sortOrder !== this.props.sortOrder ||
-        prevProps.showHiddenApps !== this.props.showHiddenApps ||
-        prevProps.showDefaultApps !== this.props.showDefaultApps ||
-        prevProps.visibleDefaultAppNames.join('|') !== this.props.visibleDefaultAppNames.join('|')) {
+    const sortOrderChanged = prevProps.sortOrder !== this.props.sortOrder;
+    const cacheConfigurationChanged = getEnterpriseAppsCacheSignature(this.getCacheConfiguration(prevProps)) !==
+      getEnterpriseAppsCacheSignature(this.getCacheConfiguration());
+    const cacheIdentityChanged = prevProps.tenantId !== this.props.tenantId ||
+      prevProps.userId !== this.props.userId;
+    const cacheModeChanged = prevProps.enableCache !== this.props.enableCache;
+    const managementContextChanged = prevProps.isPropertyPaneOpen !== this.props.isPropertyPaneOpen ||
+      prevProps.isEditMode !== this.props.isEditMode;
+
+    // Sorting is local and does not require another Graph request.
+    if (sortOrderChanged && !cacheConfigurationChanged && !cacheIdentityChanged &&
+        !cacheModeChanged && !managementContextChanged) {
       this.cancelDetailTransition();
       this.detailRequestId++;
       this.setState({
+        apps: this.sortApps(this.state.apps),
+        selectedApp: undefined,
+        isDetailTransitioning: false,
+        isReturningToResults: false,
+        isDetailDismissed: false
+      });
+    } else if (cacheConfigurationChanged || cacheIdentityChanged || cacheModeChanged || managementContextChanged) {
+      this.cancelDetailTransition();
+      this.detailRequestId++;
+      this.setState({
+        apps: [],
+        isLoading: true,
+        error: undefined,
         selectedApp: undefined,
         isDetailTransitioning: false,
         isReturningToResults: false,
         isDetailDismissed: false
       });
       this.loadApps().catch(error => {
-        console.error('Error loading apps:', error);
-        this.setState({ error: error.message, isLoading: false });
+        this.handleLoadError(error);
       });
     }
+  }
+
+  private getCacheConfiguration(props: IMyEnterpriseAppsProps = this.props): IEnterpriseAppsCacheConfiguration {
+    return {
+      tenantId: props.tenantId,
+      userId: props.userId,
+      showHiddenApps: props.showHiddenApps === true,
+      showDefaultApps: props.showDefaultApps !== false,
+      visibleDefaultAppNames: Array.isArray(props.visibleDefaultAppNames) ? props.visibleDefaultAppNames : []
+    };
+  }
+
+  private canUseCache(configuration: IEnterpriseAppsCacheConfiguration = this.getCacheConfiguration()): boolean {
+    return this.props.enableCache !== false &&
+      !this.props.isPropertyPaneOpen &&
+      !this.props.isEditMode &&
+      getEnterpriseAppsCacheKey(configuration.tenantId, configuration.userId) !== undefined;
+  }
+
+  private canWriteCache(
+    configuration: IEnterpriseAppsCacheConfiguration,
+    cacheWasAllowedWhenLoadStarted: boolean
+  ): boolean {
+    if (!cacheWasAllowedWhenLoadStarted || !this.canUseCache()) {
+      return false;
+    }
+
+    const currentConfiguration = this.getCacheConfiguration();
+    return getEnterpriseAppsCacheKey(currentConfiguration.tenantId, currentConfiguration.userId) ===
+      getEnterpriseAppsCacheKey(configuration.tenantId, configuration.userId) &&
+      getEnterpriseAppsCacheSignature(currentConfiguration) === getEnterpriseAppsCacheSignature(configuration);
+  }
+
+  private isCurrentLoad(loadRequestId: number): boolean {
+    return loadRequestId === this.loadRequestId;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return typeof error === 'string' ? error : strings.ErrorLoading;
+  }
+
+  private handleLoadError(error: unknown): void {
+    console.error('Error loading apps:', error);
+    this.setState({ error: this.getErrorMessage(error), isLoading: false });
   }
 
   /**
@@ -305,7 +391,26 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
    * Load apps from Microsoft Graph API
    */
   private async loadApps(): Promise<void> {
+    const loadRequestId = ++this.loadRequestId;
+    const cacheConfiguration = this.getCacheConfiguration();
+    const cacheWasAllowedWhenLoadStarted = this.canUseCache(cacheConfiguration);
+
     try {
+      if (this.props.enableCache === false) {
+        this.cache.remove(cacheConfiguration);
+      } else if (cacheWasAllowedWhenLoadStarted) {
+        const cachedApps = this.cache.read(cacheConfiguration, normalizeCacheDuration(this.props.cacheDurationMinutes));
+        if (cachedApps !== undefined) {
+          if (this.isCurrentLoad(loadRequestId)) {
+            this.setState({
+              apps: this.sortApps(cachedApps),
+              error: undefined
+            });
+          }
+          return;
+        }
+      }
+
       const { graphClient } = this.props;
 
       // App role assignments remain the source of truth for apps available to
@@ -363,8 +468,8 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       const candidatesNeedingAssignmentCheck = integratedApps.filter(app =>
         !myAssignedResourceIds.has(app.id) && !isSuppressedDefaultApp(app.displayName || '')
       );
-      const unassignedApps = await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
-      unassignedApps.forEach(app => {
+      const unassignedAppsResult = await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
+      unassignedAppsResult.apps.forEach(app => {
         enterpriseAppsById.set(app.id, this.createAppFromServicePrincipal(app));
       });
 
@@ -404,7 +509,12 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
       const allApps = Array.from(enterpriseAppsById.values()).concat(standaloneDefaultApps);
       if (allApps.length === 0) {
-        this.setState({ apps: [], isLoading: false });
+        if (this.isCurrentLoad(loadRequestId)) {
+          this.setState({ apps: [] });
+          if (unassignedAppsResult.isComplete && this.canWriteCache(cacheConfiguration, cacheWasAllowedWhenLoadStarted)) {
+            this.cache.write(cacheConfiguration, []);
+          }
+        }
         return;
       }
 
@@ -412,17 +522,30 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       const appsArray = this.sortApps(allApps);
 
       // Set initial state with sorted apps
-      this.setState({ apps: appsArray });
+      if (this.isCurrentLoad(loadRequestId)) {
+        this.setState({ apps: appsArray });
+      }
 
       // Load service principal details asynchronously
-      await this.loadServicePrincipalDetails(appsArray);
+      const loadedAppsResult = await this.loadServicePrincipalDetails(appsArray);
+
+      if (this.isCurrentLoad(loadRequestId)) {
+        this.setState({ apps: loadedAppsResult.apps });
+        if (unassignedAppsResult.isComplete && loadedAppsResult.isComplete &&
+            this.canWriteCache(cacheConfiguration, cacheWasAllowedWhenLoadStarted)) {
+          this.cache.write(cacheConfiguration, loadedAppsResult.apps);
+        }
+      }
 
     } catch (error) {
-      console.error('Error loading apps:', error);
-      throw error;
+      if (this.isCurrentLoad(loadRequestId)) {
+        throw error;
+      }
     }
     finally {
-      this.setState({ isLoading: false }, this.openDetailForExactMatch);
+      if (this.isCurrentLoad(loadRequestId)) {
+        this.setState({ isLoading: false }, this.openDetailForExactMatch);
+      }
     }
   }
 
@@ -474,10 +597,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     return chunks;
   }
 
-  private async getUnassignedIntegratedApps(candidates: IServicePrincipalInfo[]): Promise<IServicePrincipalInfo[]> {
+  private async getUnassignedIntegratedApps(candidates: IServicePrincipalInfo[]): Promise<IUnassignedAppsResult> {
     const unassignedApps: IServicePrincipalInfo[] = [];
     const batchSize = 20;
     let requestNumber = 0;
+    let isComplete = true;
 
     for (const candidateChunk of this.chunk(candidates, batchSize)) {
       const requestIdToApp = new Map<string, IServicePrincipalInfo>();
@@ -508,21 +632,24 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
           if (isSuccessful && Array.isArray(assignments) && assignments.length === 0) {
             unassignedApps.push(servicePrincipal);
           } else if (!isSuccessful) {
+            isComplete = false;
             console.warn(`Could not determine assignments for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
           } else {
+            isComplete = false;
             console.warn(`Received an incomplete assignment response for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
           }
         });
       } catch (error) {
         // A failed batch leaves the assignment state unknown, so all apps in
         // this chunk remain hidden rather than risking exposure to other users.
+        isComplete = false;
         candidateChunk.forEach(servicePrincipal => {
           console.warn(`Could not determine assignments for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, error);
         });
       }
     }
 
-    return unassignedApps;
+    return { apps: unassignedApps, isComplete };
   }
 
   /**
@@ -584,10 +711,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   }
 
   /**
-   * Load service principal details and update app state
+   * Load service principal details and prepare the final app state
    */
-  private async loadServicePrincipalDetails(apps: IAppData[]): Promise<void> {
+  private async loadServicePrincipalDetails(apps: IAppData[]): Promise<ILoadedAppsResult> {
     const { graphClient, showHiddenApps } = this.props;
+    let isComplete = true;
 
     const loadPromises = apps.map(async (app) => {
       try {
@@ -608,6 +736,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
 
         return this.applyServicePrincipalDetails(app, spInfo);
       } catch (error) {
+        isComplete = false;
         console.warn(`Could not load details for ${app.name}:`, error);
         return { ...app, isLoaded: true };
       }
@@ -625,7 +754,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       ? dedupedApps 
       : dedupedApps.filter(app => !app.isHidden);
 
-    this.setState({ apps: filteredApps }, this.openDetailForExactMatch);
+    return { apps: filteredApps, isComplete };
   }
 
   private applyServicePrincipalDetails(app: IAppData, servicePrincipal: IServicePrincipalInfo): IAppData {
