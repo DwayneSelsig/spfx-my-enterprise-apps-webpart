@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/6cd1f83f-80c3-4986-b193-1923b633b056
 The Entra Enterprise Apps webpart provides the following functionality:
 
 - Integration with Microsoft Graph API to retrieve enterprise applications
-- Optional browser caching with configurable duration (5 minutes to 24 hours)
+- Optional browser caching with configurable duration (10 minutes to 10 hours)
 - Configurable icon sizes (small, normal, large, huge)
 - Option to show or hide hidden applications
 - Display of Entra ID applications with custom sorting capabilities
@@ -32,7 +32,7 @@ The webpart can be configured through the property pane with the following optio
 - **Sort Order**: Enter app-name keywords (one per line) to prioritize apps matching those terms
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
 - **Enable browser cache**: Cache the fully loaded app list in the browser for faster subsequent loads
-- **Cache duration**: Configure the browser-cache lifetime from 5 minutes to 24 hours (default: 30 minutes)
+- **Cache duration**: Configure the browser-cache lifetime from 10 minutes to 10 hours (default: 30 minutes)
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
 
 The browser cache is isolated by Microsoft Entra tenant and signed-in user. It is automatically ignored while the webpart is being edited or configured, and cache entries are invalidated when app-visibility settings change.

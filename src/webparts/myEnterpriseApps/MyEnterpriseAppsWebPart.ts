@@ -17,6 +17,9 @@ import MyEnterpriseApps from './components/MyEnterpriseApps';
 import { IMyEnterpriseAppsProps } from './components/IMyEnterpriseAppsProps';
 import { defaultApps } from './assets/DefaultApps';
 import {
+  CACHE_DURATION_STEP_MINUTES,
+  MAX_CACHE_DURATION_MINUTES,
+  MIN_CACHE_DURATION_MINUTES,
   normalizeCacheDuration
 } from './components/EnterpriseAppsCache';
 
@@ -161,6 +164,29 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
       .map(defaultApp => defaultApp.name);
   }
 
+  private formatCacheDuration(value: unknown): string {
+    const minutes = normalizeCacheDuration(value);
+    const minuteLabel = minutes === 1 ? strings.CacheDurationMinute : strings.CacheDurationMinutes;
+
+    if (minutes < 60) {
+      return `${minutes} ${minuteLabel}`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    const hourLabel = hours === 1 ? strings.CacheDurationHour : strings.CacheDurationHours;
+    const formattedHours = `${hours} ${hourLabel}`;
+
+    if (remainingMinutes === 0) {
+      return formattedHours;
+    }
+
+    const remainingMinuteLabel = remainingMinutes === 1
+      ? strings.CacheDurationMinute
+      : strings.CacheDurationMinutes;
+    return `${formattedHours} ${remainingMinutes} ${remainingMinuteLabel}`;
+  }
+
   protected onPropertyPaneFieldChanged(propertyPath: string, oldValue: unknown, newValue: unknown): void {
     if (propertyPath === 'layoutPreset' && newValue !== 'custom') {
       const preset = newValue as LayoutPreset;
@@ -298,7 +324,8 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
               ]
             },
             {
-              groupName: strings.CacheGroupName,
+              groupName: '',
+              isGroupNameHidden: true,
               groupFields: [
                 PropertyPaneToggle('enableCache', {
                   label: strings.EnableCacheLabel,
@@ -307,12 +334,12 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
                   ariaLabel: strings.EnableCacheLabel
                 }),
                 PropertyPaneSlider('cacheDurationMinutes', {
-                  label: strings.CacheDurationFieldLabel,
-                  min: 5,
-                  max: 1440,
-                  step: 5,
+                  label: `${strings.CacheDurationFieldLabel} (${this.formatCacheDuration(this.properties.cacheDurationMinutes)})`,
+                  min: MIN_CACHE_DURATION_MINUTES,
+                  max: MAX_CACHE_DURATION_MINUTES,
+                  step: CACHE_DURATION_STEP_MINUTES,
                   value: normalizeCacheDuration(this.properties.cacheDurationMinutes),
-                  showValue: true,
+                  showValue: false,
                   disabled: this.properties.enableCache === false,
                   ariaLabel: strings.CacheDurationFieldLabel
                 })

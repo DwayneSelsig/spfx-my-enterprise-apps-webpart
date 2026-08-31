@@ -19,8 +19,9 @@ export interface IEnterpriseAppsCacheEntry {
 
 export const ENTERPRISE_APPS_CACHE_SCHEMA_VERSION = 1;
 export const DEFAULT_CACHE_DURATION_MINUTES = 30;
-export const MIN_CACHE_DURATION_MINUTES = 5;
-export const MAX_CACHE_DURATION_MINUTES = 1440;
+export const MIN_CACHE_DURATION_MINUTES = 10;
+export const MAX_CACHE_DURATION_MINUTES = 600;
+export const CACHE_DURATION_STEP_MINUTES = 10;
 
 function normalizeIdentifier(identifier: unknown): string | undefined {
   const normalizedIdentifier = typeof identifier === 'string' ? identifier.trim().toLowerCase() : undefined;

@@ -7,9 +7,12 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   SortOrderFieldDescription: string;
   ShowHiddenAppsLabel: string;
   ShowDefaultAppsLabel: string;
-  CacheGroupName: string;
   EnableCacheLabel: string;
   CacheDurationFieldLabel: string;
+  CacheDurationMinute: string;
+  CacheDurationMinutes: string;
+  CacheDurationHour: string;
+  CacheDurationHours: string;
   DefaultAppsGroupName: string;
   DisplayInternalNotesLabel: string;
   DisplayAppIdentifiersLabel: string;

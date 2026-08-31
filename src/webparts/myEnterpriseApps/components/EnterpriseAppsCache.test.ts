@@ -53,9 +53,11 @@ describe('EnterpriseAppsCache', () => {
   it('normalizes cache duration defensively', () => {
     expect(normalizeCacheDuration(undefined)).toBe(DEFAULT_CACHE_DURATION_MINUTES);
     expect(normalizeCacheDuration('invalid')).toBe(DEFAULT_CACHE_DURATION_MINUTES);
-    expect(normalizeCacheDuration(1)).toBe(5);
+    expect(normalizeCacheDuration(1)).toBe(10);
+    expect(normalizeCacheDuration(10)).toBe(10);
     expect(normalizeCacheDuration(30)).toBe(30);
-    expect(normalizeCacheDuration(1441)).toBe(1440);
+    expect(normalizeCacheDuration(600)).toBe(600);
+    expect(normalizeCacheDuration(601)).toBe(600);
   });
 
   it('writes and reads a valid cache entry', () => {
