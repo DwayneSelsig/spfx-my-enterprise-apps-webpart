@@ -241,13 +241,17 @@
   }
 
   .detailCard {
-    border: 1px solid "[theme:neutralLight, default:#edebe9]";
-    border-radius: 16px;
     background: "[theme:white, default:#ffffff]";
     background: var(--white);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 24px;
+    box-shadow: rgba(0, 0, 0, 0.18) 0 1.5px 6px;
+    box-sizing: border-box;
+    margin: 0 auto;
+    max-width: 1024px;
     overflow: hidden;
     padding: 36px;
+    width: 100%;
   }
 
   .detailLayout {
