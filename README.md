@@ -76,6 +76,7 @@ We welcome contributions from the community! Here are some ways you can help:
 | 0.7.0.0 | 2026-08-27       | Added end-user filtering and custom app sizing; updated SPFx packages and Copilot logo |
 | 0.8.0.0 | 2026-08-30       | Added app detail view, configurable default apps and property-pane toggles; improved default icons, Teams link and localization |
 | 0.8.1.0 | 2026-08-30       | Added Entra ID and PowerShell setup instructions; improved enterprise application selection and privacy handling |
+| 0.8.2.0 | 2026-09-03       | Added configurable browser caching and single-app detail layout |
 
 ## Used SharePoint Framework Version
 
