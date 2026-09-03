@@ -80,6 +80,9 @@ function createProps(graphClient: MSGraphClientV3): IMyEnterpriseAppsProps {
     iconSize: 48,
     textSize: 11,
     appSpacing: 12,
+    themePrimary: '#0078d4',
+    bodyBackground: '#ffffff',
+    themePrimaryTextColor: '#ffffff',
     hasTeamsContext: false,
     graphClient
   };

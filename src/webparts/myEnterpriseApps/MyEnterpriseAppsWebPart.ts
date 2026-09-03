@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import { DisplayMode, Version } from '@microsoft/sp-core-library';
+import { IReadonlyTheme } from '@microsoft/sp-component-base';
 import {
   type IPropertyPaneConfiguration,
   PropertyPaneTextField,
@@ -16,6 +17,7 @@ import * as strings from 'MyEnterpriseAppsWebPartStrings';
 import MyEnterpriseApps from './components/MyEnterpriseApps';
 import { IMyEnterpriseAppsProps } from './components/IMyEnterpriseAppsProps';
 import { defaultApps } from './assets/DefaultApps';
+import { SharePointThemeColors } from './SharePointThemeColors';
 import {
   CACHE_DURATION_STEP_MINUTES,
   MAX_CACHE_DURATION_MINUTES,
@@ -50,6 +52,7 @@ export interface IMyEnterpriseAppsWebPartProps {
 export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEnterpriseAppsWebPartProps> {
   private graphClient!: MSGraphClientV3;
   private isPropertyPaneOpen = false;
+  private readonly themeColors = new SharePointThemeColors();
 
   private static readonly defaultIconSize: number = 48;
   private static readonly defaultTextSize: number = 11;
@@ -240,6 +243,9 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         iconSize: this.properties.iconSize as number,
         textSize: this.properties.textSize as number,
         appSpacing: this.properties.appSpacing as number,
+        themePrimary: this.themeColors.themePrimary,
+        bodyBackground: this.themeColors.bodyBackground,
+        themePrimaryTextColor: this.themeColors.themePrimaryTextColor,
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
         graphClient: this.graphClient
       }
@@ -260,6 +266,34 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
 
   protected onDispose(): void {
     ReactDom.unmountComponentAtNode(this.domElement);
+  }
+
+  protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
+    const palette = currentTheme?.palette;
+
+    this.themeColors.themePrimary = palette?.themePrimary ?? '#0078d4';
+    this.themeColors.bodyBackground = currentTheme?.semanticColors?.bodyBackground ?? palette?.white ?? '#ffffff';
+    this.themeColors.white = palette?.white ?? '#ffffff';
+    this.themeColors.black = palette?.black ?? '#000000';
+    this.themeColors.themePrimaryTextColor = this.getContrastColor(this.themeColors.themePrimary);
+  }
+
+  private getContrastColor(color: string): string {
+    const hex = color.trim().replace(/^#/, '');
+    const normalizedHex = hex.length === 3
+      ? hex.split('').map(value => `${value}${value}`).join('')
+      : hex;
+
+    if (!/^[0-9a-fA-F]{6}$/.test(normalizedHex)) {
+      return this.themeColors.white;
+    }
+
+    const red = parseInt(normalizedHex.substring(0, 2), 16);
+    const green = parseInt(normalizedHex.substring(2, 4), 16);
+    const blue = parseInt(normalizedHex.substring(4, 6), 16);
+    const luminance = (0.299 * red) + (0.587 * green) + (0.114 * blue);
+
+    return luminance > 186 ? this.themeColors.black : this.themeColors.white;
   }
 
   protected get dataVersion(): Version {

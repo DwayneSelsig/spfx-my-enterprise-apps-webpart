@@ -22,6 +22,9 @@ export interface IMyEnterpriseAppsProps {
   iconSize: number;
   textSize: number;
   appSpacing: number;
+  themePrimary: string;
+  bodyBackground: string;
+  themePrimaryTextColor: string;
   hasTeamsContext: boolean;
   graphClient: MSGraphClientV3;
 }

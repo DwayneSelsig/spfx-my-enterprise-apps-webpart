@@ -192,7 +192,15 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
    */
   private generateDefaultIcon(appName: string): string {
     const firstLetter = appName.charAt(0).toUpperCase();
-    return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='8' fill='%230078d4'/%3E%3Ctext x='24' y='32' text-anchor='middle' fill='white' font-size='22' font-family='Segoe UI, sans-serif' font-weight='600'%3E${firstLetter}%3C/text%3E%3C/svg%3E`;
+    const backgroundColor = this.props.themePrimary;
+    const textColor = this.props.themePrimaryTextColor;
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+        <rect width="48" height="48" rx="8" fill="${backgroundColor}" />
+        <text x="24" y="32" text-anchor="middle" fill="${textColor}" font-size="22" font-family="Segoe UI, sans-serif" font-weight="600">${firstLetter}</text>
+      </svg>`;
+
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
   }
 
   private normalizeName(name: string): string {
