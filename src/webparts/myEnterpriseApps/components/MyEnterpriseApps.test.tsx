@@ -117,7 +117,10 @@ function createGraphClient(): { client: MSGraphClientV3; api: jest.Mock } {
   return { client: { api } as unknown as MSGraphClientV3, api };
 }
 
-function createBatchGraphClient(appCount: number): { client: MSGraphClientV3; batchPosts: jest.Mock[] } {
+function createBatchGraphClient(
+  appCount: number,
+  hasAssignments: boolean = false
+): { client: MSGraphClientV3; batchPosts: jest.Mock[] } {
   const integratedApps = Array.from({ length: appCount }, (_value, index) => ({
     id: `resource-id-${index}`,
     appId: `app-id-${index}`,
@@ -133,7 +136,11 @@ function createBatchGraphClient(appCount: number): { client: MSGraphClientV3; ba
         responses: body.requests.map(request => ({
           id: request.id,
           status: 200,
-          body: { value: [] }
+          body: {
+            value: hasAssignments
+              ? [{ principalId: 'assigned-principal-id', principalType: 'User' }]
+              : []
+          }
         }))
       }));
       batchPosts.push(post);
@@ -173,6 +180,7 @@ describe('MyEnterpriseApps cache integration', () => {
   afterEach(() => {
     ReactDOM.unmountComponentAtNode(container);
     container.remove();
+    jest.restoreAllMocks();
   });
 
   it('skips Graph when a valid cache entry exists', async () => {
@@ -239,6 +247,18 @@ describe('MyEnterpriseApps cache integration', () => {
 
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toBeUndefined();
+  });
+
+  it('writes the cache after a successful assignment check finds existing assignments', async () => {
+    const graphClient = createBatchGraphClient(1, true);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await renderComponent(createProps(graphClient.client), container);
+
+    expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toEqual([]);
+    expect(warn.mock.calls.some(([message]) =>
+      typeof message === 'string' && message.indexOf('assignment response') !== -1
+    )).toBe(false);
   });
 
   it.each([20, 21])('keeps Graph batches at a maximum of 20 requests for %i apps', async (appCount: number) => {

@@ -629,14 +629,14 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
           const isSuccessful = response !== undefined && response.status >= 200 && response.status < 300;
           const assignments = response?.body?.value;
 
-          if (isSuccessful && Array.isArray(assignments) && assignments.length === 0) {
-            unassignedApps.push(servicePrincipal);
-          } else if (!isSuccessful) {
+          if (!isSuccessful) {
             isComplete = false;
             console.warn(`Could not determine assignments for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
-          } else {
+          } else if (!Array.isArray(assignments)) {
             isComplete = false;
-            console.warn(`Received an incomplete assignment response for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
+            console.warn(`Received an invalid assignment response for ${servicePrincipal.displayName || servicePrincipal.id}; app will not be shown.`, response);
+          } else if (assignments.length === 0) {
+            unassignedApps.push(servicePrincipal);
           }
         });
       } catch (error) {
