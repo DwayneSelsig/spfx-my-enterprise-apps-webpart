@@ -79,6 +79,7 @@ We welcome contributions from the community! Here are some ways you can help:
 | 0.8.1.0 | 2026-08-30       | Added Entra ID and PowerShell setup instructions; improved enterprise application selection and privacy handling |
 | 0.8.3.0 | 2026-09-03       | Added configurable browser caching and single-app detail layout |
 | 0.8.5.0 | 2026-09-03       | Made generated fallback icons SharePoint-theme-aware with accessible automatic text contrast |
+| 0.8.6.0 | 2026-09-07       | Added an assigned-apps-only filter, enabled by default, with optional display of unassigned enterprise apps |
 
 ## Used SharePoint Framework Version
 
