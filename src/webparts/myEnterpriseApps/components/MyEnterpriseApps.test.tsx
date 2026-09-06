@@ -46,6 +46,7 @@ const cacheConfiguration: IEnterpriseAppsCacheConfiguration = {
   tenantId: 'tenant-id',
   userId: 'user-id',
   showHiddenApps: false,
+  showOnlyAssignedApps: false,
   showDefaultApps: false,
   visibleDefaultAppNames: []
 };
@@ -65,6 +66,7 @@ function createProps(graphClient: MSGraphClientV3): IMyEnterpriseAppsProps {
     title: 'Apps',
     sortOrder: '',
     showHiddenApps: false,
+    showOnlyAssignedApps: false,
     showDefaultApps: false,
     visibleDefaultAppNames: [],
     enableCache: true,
@@ -107,7 +109,9 @@ function createGraphClient(): { client: MSGraphClientV3; api: jest.Mock } {
   const api = jest.fn((path: string) => {
     const response = path === '/me/appRoleAssignments'
       ? { value: [assignment] }
-      : { value: [servicePrincipal] };
+      : path === '/servicePrincipals'
+        ? { value: [servicePrincipal] }
+        : servicePrincipal;
     const request = {
       select: jest.fn().mockReturnThis(),
       filter: jest.fn().mockReturnThis(),
@@ -216,6 +220,19 @@ describe('MyEnterpriseApps cache integration', () => {
     expect(graphClient.api).toHaveBeenCalledWith('/servicePrincipals');
     expect(container.textContent).toContain('Contoso');
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toHaveLength(1);
+  });
+
+  it('skips tenant-wide and unassigned-app queries when only assigned apps are shown', async () => {
+    const graphClient = createGraphClient();
+    const assignedOnlyConfiguration = { ...cacheConfiguration, showOnlyAssignedApps: true };
+
+    await renderComponent({ ...createProps(graphClient.client), showOnlyAssignedApps: true }, container);
+
+    expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
+    expect(graphClient.api).not.toHaveBeenCalledWith('/servicePrincipals');
+    expect(graphClient.api).toHaveBeenCalledWith('/servicePrincipals/resource-id');
+    expect(container.textContent).toContain('Contoso');
+    expect(new EnterpriseAppsCache().read(assignedOnlyConfiguration, 30)).toHaveLength(1);
   });
 
   it('bypasses the cache while the Property Pane is open and reuses it after closing', async () => {

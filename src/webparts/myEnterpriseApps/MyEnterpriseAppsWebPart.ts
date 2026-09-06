@@ -35,6 +35,7 @@ export interface IMyEnterpriseAppsWebPartProps {
   title: string;
   sortOrder: string;
   showHiddenApps: boolean;
+  showOnlyAssignedApps?: boolean;
   showDefaultApps: boolean;
   enableCache?: boolean;
   cacheDurationMinutes?: number;
@@ -119,6 +120,9 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
     }
     if (typeof this.properties.enableCache !== 'boolean') {
       this.properties.enableCache = true;
+    }
+    if (typeof this.properties.showOnlyAssignedApps !== 'boolean') {
+      this.properties.showOnlyAssignedApps = true;
     }
     this.properties.cacheDurationMinutes = normalizeCacheDuration(this.properties.cacheDurationMinutes);
   }
@@ -228,6 +232,7 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         title: this.properties.title,
         sortOrder: this.properties.sortOrder,
         showHiddenApps: this.properties.showHiddenApps,
+        showOnlyAssignedApps: this.properties.showOnlyAssignedApps !== false,
         showDefaultApps: this.properties.showDefaultApps,
         visibleDefaultAppNames: this.getVisibleDefaultAppNames(),
         enableCache: this.properties.enableCache !== false,
@@ -405,6 +410,10 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
             {
               isGroupNameHidden: true,
               groupFields: [
+                PropertyPaneCheckbox('showOnlyAssignedApps', {
+                  text: strings.ShowOnlyAssignedAppsLabel,
+                  checked: this.properties.showOnlyAssignedApps !== false
+                }),
                 PropertyPaneCheckbox('showHiddenApps', {
                   text: strings.ShowHiddenAppsLabel
                 })

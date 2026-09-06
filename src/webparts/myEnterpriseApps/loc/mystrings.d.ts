@@ -6,6 +6,7 @@ declare interface IMyEnterpriseAppsWebPartStrings {
   SortOrderFieldLabel: string;
   SortOrderFieldDescription: string;
   ShowHiddenAppsLabel: string;
+  ShowOnlyAssignedAppsLabel: string;
   ShowDefaultAppsLabel: string;
   EnableCacheLabel: string;
   CacheDurationFieldLabel: string;

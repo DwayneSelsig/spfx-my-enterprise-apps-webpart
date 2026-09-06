@@ -21,6 +21,7 @@
       "title": "",
       "sortOrder": "",
       "showHiddenApps": false,
+      "showOnlyAssignedApps": true,
       "showDefaultApps": true,
       "enableCache": true,
       "cacheDurationMinutes": 30,

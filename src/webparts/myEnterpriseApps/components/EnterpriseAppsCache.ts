@@ -4,6 +4,7 @@ export interface IEnterpriseAppsCacheConfiguration {
   tenantId?: string;
   userId?: string;
   showHiddenApps: boolean;
+  showOnlyAssignedApps: boolean;
   showDefaultApps: boolean;
   visibleDefaultAppNames: string[];
 }
@@ -50,6 +51,7 @@ export function getEnterpriseAppsCacheKey(tenantId?: unknown, userId?: unknown):
 export function getEnterpriseAppsCacheSignature(configuration: IEnterpriseAppsCacheConfiguration): string {
   return JSON.stringify({
     showHiddenApps: configuration.showHiddenApps === true,
+    showOnlyAssignedApps: configuration.showOnlyAssignedApps !== false,
     showDefaultApps: configuration.showDefaultApps !== false,
     visibleDefaultAppNames: normalizeVisibleDefaultAppNames(configuration.visibleDefaultAppNames)
   });

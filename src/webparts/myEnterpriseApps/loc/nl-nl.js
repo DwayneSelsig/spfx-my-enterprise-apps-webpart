@@ -7,6 +7,7 @@ define([], function() {
     "SortOrderFieldLabel": "Sorteervolgorde",
     "SortOrderFieldDescription": "Voer trefwoorden voor app-namen in (één per regel) om prioriteit te geven. Apps die overeenkomen met deze termen verschijnen eerst in de opgegeven volgorde.",
     "ShowHiddenAppsLabel": "Toon verborgen apps (semi-transparant)",
+    "ShowOnlyAssignedAppsLabel": "Alleen toegewezen apps",
     "ShowDefaultAppsLabel": "Toon standaardapps",
     "EnableCacheLabel": "Browsercache inschakelen",
     "CacheDurationFieldLabel": "Cacheduur",

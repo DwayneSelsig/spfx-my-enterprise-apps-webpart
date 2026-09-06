@@ -144,6 +144,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       tenantId: props.tenantId,
       userId: props.userId,
       showHiddenApps: props.showHiddenApps === true,
+      showOnlyAssignedApps: props.showOnlyAssignedApps !== false,
       showDefaultApps: props.showDefaultApps !== false,
       visibleDefaultAppNames: Array.isArray(props.visibleDefaultAppNames) ? props.visibleDefaultAppNames : []
     };
@@ -434,13 +435,16 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       // Only these service principals are Enterprise Application candidates.
       // In particular, ServiceIdentity (Entra Agent Identities) is excluded by
       // the servicePrincipalType filter rather than by a name-based heuristic.
-      const integratedApps = await this.getAllGraphPages<IServicePrincipalInfo>(
-        graphClient
-          .api('/servicePrincipals')
-          .filter("servicePrincipalType eq 'Application' and tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')")
-          .select('id,appId,appOwnerOrganizationId,displayName,appDescription,notes,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
-          .top(999)
-      );
+      const showOnlyAssignedApps = this.props.showOnlyAssignedApps !== false;
+      const integratedApps = showOnlyAssignedApps
+        ? []
+        : await this.getAllGraphPages<IServicePrincipalInfo>(
+          graphClient
+            .api('/servicePrincipals')
+            .filter("servicePrincipalType eq 'Application' and tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')")
+            .select('id,appId,appOwnerOrganizationId,displayName,appDescription,notes,homepage,publisherName,verifiedPublisher,preferredSingleSignOnMode,info,tags,oauth2PermissionScopes')
+            .top(999)
+        );
       const includeDefaults = this.props.showDefaultApps ?? true;
       const visibleDefaultAppKeys = includeDefaults
         ? this.props.visibleDefaultAppNames.map(appName => this.normalizeName(appName))
@@ -476,7 +480,9 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       const candidatesNeedingAssignmentCheck = integratedApps.filter(app =>
         !myAssignedResourceIds.has(app.id) && !isSuppressedDefaultApp(app.displayName || '')
       );
-      const unassignedAppsResult = await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
+      const unassignedAppsResult = showOnlyAssignedApps
+        ? { apps: [], isComplete: true }
+        : await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
       unassignedAppsResult.apps.forEach(app => {
         enterpriseAppsById.set(app.id, this.createAppFromServicePrincipal(app));
       });

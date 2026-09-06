@@ -31,6 +31,7 @@ The webpart can be configured through the property pane with the following optio
 - **Title**: Custom title for the webpart
 - **Sort Order**: Enter app-name keywords (one per line) to prioritize apps matching those terms
 - **Show Hidden Apps**: Toggle to display or hide hidden enterprise applications
+- **Show only assigned apps**: Show only the current user's assigned apps (enabled by default); disable it to also include tenant apps that are assigned to nobody
 - **Enable browser cache**: Cache the fully loaded app list in the browser for faster subsequent loads
 - **Cache duration**: Configure the browser-cache lifetime from 10 minutes to 10 hours (default: 30 minutes)
 - **Icon Size**: Choose from small, normal, large, or huge icon sizes
@@ -216,13 +217,13 @@ This solution requires the following Microsoft Graph permissions:
 
 ## Enterprise application selection and privacy
 
-`/me/appRoleAssignments` remains the source of truth for applications available to the current user, but it cannot identify Enterprise Applications that are present in the tenant and assigned to nobody. The webpart therefore also reads paged `servicePrincipals` results, restricted to both `servicePrincipalType eq 'Application'` and the `WindowsAzureActiveDirectoryIntegratedApp` tag. Both conditions are required: the type excludes `ServiceIdentity` (including Entra Agent Identities), while the tag excludes Microsoft infrastructure and backend service principals without relying on app names, publishers, or maintained blacklists.
+`/me/appRoleAssignments` remains the source of truth for applications available to the current user. By default, **Show only assigned apps** is enabled and the webpart does not enumerate tenant-wide Enterprise Applications. When an administrator disables this option, the webpart also reads paged `servicePrincipals` results, restricted to both `servicePrincipalType eq 'Application'` and the `WindowsAzureActiveDirectoryIntegratedApp` tag. Both conditions are required: the type excludes `ServiceIdentity` (including Entra Agent Identities), while the tag excludes Microsoft infrastructure and backend service principals without relying on app names, publishers, or maintained blacklists.
 
 For an Integrated App that is not in the current user's assignments, the webpart checks `appRoleAssignedTo`. Only a successful response with an empty `value` array means that the app is unassigned and can be shown. An app with any assignment (user, group, or service principal) is not shown to users who do not have it themselves.
 
-These checks use Microsoft Graph `/$batch`, with at most 20 `appRoleAssignedTo` requests per batch. The first page requests only one assignment because the check only needs to distinguish empty from non-empty results. Batch subrequest failures and other unknown assignment states are handled fail-closed: the affected app is not shown. Existing `HideApp` and **Show Hidden Apps** behavior is applied after this selection.
+When unassigned apps are included, these checks use Microsoft Graph `/$batch`, with at most 20 `appRoleAssignedTo` requests per batch. The first page requests only one assignment because the check only needs to distinguish empty from non-empty results. Batch subrequest failures and other unknown assignment states are handled fail-closed: the affected app is not shown. Existing `HideApp` and **Show Hidden Apps** behavior is applied after this selection.
 
-There is no webpart-specific automated test suite yet. When validating a tenant manually, check that an app assigned to the current user and an unassigned Integrated App are shown; apps assigned only to another user or group are not shown; `HideApp` follows **Show Hidden Apps**; `ServiceIdentity` and non-tagged `Application` service principals are excluded; a candidate set of 20 and 21 apps produces one and two batches respectively; paged service-principal results are complete; and a failed batch subrequest does not expose its app.
+Automated tests cover both assigned-only and unassigned-app loading, cache isolation, and Graph batch limits. When validating a tenant manually, check that assigned-only mode shows the current user's apps without tenant-wide enumeration; disabling it also shows unassigned Integrated Apps; apps assigned only to another user or group are not shown; `HideApp` follows **Show Hidden Apps**; and failed assignment checks do not expose an app.
 
 ## References
 

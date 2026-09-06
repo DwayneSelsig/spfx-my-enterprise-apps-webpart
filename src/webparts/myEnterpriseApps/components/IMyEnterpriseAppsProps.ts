@@ -7,6 +7,7 @@ export interface IMyEnterpriseAppsProps {
   title: string;
   sortOrder: string;
   showHiddenApps: boolean;
+  showOnlyAssignedApps: boolean;
   showDefaultApps: boolean;
   visibleDefaultAppNames: string[];
   enableCache: boolean;

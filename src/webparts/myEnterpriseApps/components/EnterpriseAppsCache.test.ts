@@ -12,6 +12,7 @@ const configuration: IEnterpriseAppsCacheConfiguration = {
   tenantId: 'TENANT-ID',
   userId: 'USER-ID',
   showHiddenApps: false,
+  showOnlyAssignedApps: true,
   showDefaultApps: true,
   visibleDefaultAppNames: ['Word', 'Excel']
 };
@@ -47,6 +48,8 @@ describe('EnterpriseAppsCache', () => {
       getEnterpriseAppsCacheSignature(reorderedConfiguration)
     );
     expect(getEnterpriseAppsCacheSignature({ ...configuration, showHiddenApps: true }))
+      .not.toBe(getEnterpriseAppsCacheSignature(configuration));
+    expect(getEnterpriseAppsCacheSignature({ ...configuration, showOnlyAssignedApps: false }))
       .not.toBe(getEnterpriseAppsCacheSignature(configuration));
   });
 
