@@ -51,13 +51,26 @@ export interface IMyEnterpriseAppsWebPartProps {
 }
 
 export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEnterpriseAppsWebPartProps> {
-  private graphClient!: MSGraphClientV3;
+  private graphClientPromise: Promise<MSGraphClientV3> | undefined;
   private isPropertyPaneOpen = false;
   private readonly themeColors = new SharePointThemeColors();
 
   private static readonly defaultIconSize: number = 48;
   private static readonly defaultTextSize: number = 11;
   private static readonly defaultAppSpacing: number = 12;
+
+  private getGraphClient = (): Promise<MSGraphClientV3> => {
+    if (!this.graphClientPromise) {
+      this.graphClientPromise = this.context.msGraphClientFactory
+        .getClient('3')
+        .catch(error => {
+          this.graphClientPromise = undefined;
+          throw error;
+        });
+    }
+
+    return this.graphClientPromise;
+  };
 
   private getLayoutForPreset(preset: LayoutPreset): { iconSize: number; textSize: number; appSpacing: number } {
     switch (preset) {
@@ -252,7 +265,7 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
         bodyBackground: this.themeColors.bodyBackground,
         themePrimaryTextColor: this.themeColors.themePrimaryTextColor,
         hasTeamsContext: !!this.context.sdks.microsoftTeams,
-        graphClient: this.graphClient
+        getGraphClient: this.getGraphClient
       }
     );
 
@@ -262,7 +275,6 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
   protected async onInit(): Promise<void> {
     await super.onInit();
     this.migrateLegacyLayout();
-    this.graphClient = await this.context.msGraphClientFactory.getClient('3');
     // Set a localized default title when empty
     if (!this.properties.title || this.properties.title.trim() === '') {
       this.properties.title = strings.DefaultTitle || this.properties.title;

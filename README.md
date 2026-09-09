@@ -80,6 +80,7 @@ We welcome contributions from the community! Here are some ways you can help:
 | 0.8.3.0 | 2026-09-03       | Added configurable browser caching and single-app detail layout |
 | 0.8.5.0 | 2026-09-03       | Made generated fallback icons SharePoint-theme-aware with accessible automatic text contrast |
 | 0.8.6.0 | 2026-09-07       | Added an assigned-apps-only filter, enabled by default, with optional display of unassigned enterprise apps |
+| 0.8.7.0 | 2026-09-09       | Fixed intermittent app-loading failures by lazily initializing and safely reusing the Microsoft Graph client after a cache miss or expiration |
 
 ## Used SharePoint Framework Version
 

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { IconButton, SearchBox, type ISearchBox } from '@fluentui/react';
+import type { MSGraphClientV3 } from '@microsoft/sp-http';
 import styles from './MyEnterpriseApps.module.scss';
 import type {
   IMyEnterpriseAppsProps,
@@ -420,12 +421,16 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         }
       }
 
-      const { graphClient } = this.props;
+      const graphClient = await this.props.getGraphClient();
+      if (!this.isCurrentLoad(loadRequestId)) {
+        return;
+      }
 
       // App role assignments remain the source of truth for apps available to
       // the current user. Follow paging here as well because a user can have
       // more assignments than one Graph page contains.
       const assignments = await this.getAllGraphPages<IAppRoleAssignment>(
+        graphClient,
         graphClient
           .api('/me/appRoleAssignments')
           .select('id,principalDisplayName,resourceDisplayName,resourceId')
@@ -439,6 +444,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       const integratedApps = showOnlyAssignedApps
         ? []
         : await this.getAllGraphPages<IServicePrincipalInfo>(
+          graphClient,
           graphClient
             .api('/servicePrincipals')
             .filter("servicePrincipalType eq 'Application' and tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')")
@@ -482,7 +488,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       );
       const unassignedAppsResult = showOnlyAssignedApps
         ? { apps: [], isComplete: true }
-        : await this.getUnassignedIntegratedApps(candidatesNeedingAssignmentCheck);
+        : await this.getUnassignedIntegratedApps(graphClient, candidatesNeedingAssignmentCheck);
       unassignedAppsResult.apps.forEach(app => {
         enterpriseAppsById.set(app.id, this.createAppFromServicePrincipal(app));
       });
@@ -541,7 +547,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       }
 
       // Load service principal details asynchronously
-      const loadedAppsResult = await this.loadServicePrincipalDetails(appsArray);
+      const loadedAppsResult = await this.loadServicePrincipalDetails(graphClient, appsArray);
 
       if (this.isCurrentLoad(loadRequestId)) {
         this.setState({ apps: loadedAppsResult.apps });
@@ -563,7 +569,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     }
   }
 
-  private async getAllGraphPages<T>(initialRequest: IGraphRequest<T>): Promise<T[]> {
+  private async getAllGraphPages<T>(
+    graphClient: MSGraphClientV3,
+    initialRequest: IGraphRequest<T>
+  ): Promise<T[]> {
     const values: T[] = [];
     let response = await initialRequest.get();
 
@@ -574,7 +583,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
         return values;
       }
 
-      response = await this.props.graphClient.api(nextLink).get() as IGraphPage<T>;
+      response = await graphClient.api(nextLink).get() as IGraphPage<T>;
     }
   }
 
@@ -611,7 +620,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
     return chunks;
   }
 
-  private async getUnassignedIntegratedApps(candidates: IServicePrincipalInfo[]): Promise<IUnassignedAppsResult> {
+  private async getUnassignedIntegratedApps(
+    graphClient: MSGraphClientV3,
+    candidates: IServicePrincipalInfo[]
+  ): Promise<IUnassignedAppsResult> {
     const unassignedApps: IServicePrincipalInfo[] = [];
     const batchSize = 20;
     let requestNumber = 0;
@@ -632,7 +644,7 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       });
 
       try {
-        const batchResponse = await this.props.graphClient
+        const batchResponse = await graphClient
           .api('/$batch')
           .post({ requests }) as IGraphBatchResponse;
         const responsesById = new Map<string, IGraphBatchSubResponse>();
@@ -727,8 +739,11 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   /**
    * Load service principal details and prepare the final app state
    */
-  private async loadServicePrincipalDetails(apps: IAppData[]): Promise<ILoadedAppsResult> {
-    const { graphClient, showHiddenApps } = this.props;
+  private async loadServicePrincipalDetails(
+    graphClient: MSGraphClientV3,
+    apps: IAppData[]
+  ): Promise<ILoadedAppsResult> {
+    const { showHiddenApps } = this.props;
     let isComplete = true;
 
     const loadPromises = apps.map(async (app) => {

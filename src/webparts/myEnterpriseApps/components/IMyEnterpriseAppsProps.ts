@@ -27,7 +27,7 @@ export interface IMyEnterpriseAppsProps {
   bodyBackground: string;
   themePrimaryTextColor: string;
   hasTeamsContext: boolean;
-  graphClient: MSGraphClientV3;
+  getGraphClient: () => Promise<MSGraphClientV3>;
 }
 
 /**

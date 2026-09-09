@@ -61,7 +61,10 @@ const cachedApp = {
   isDefaultApp: false
 };
 
-function createProps(graphClient: MSGraphClientV3): IMyEnterpriseAppsProps {
+function createProps(
+  graphClient: MSGraphClientV3,
+  getGraphClient: () => Promise<MSGraphClientV3> = jest.fn().mockResolvedValue(graphClient)
+): IMyEnterpriseAppsProps {
   return {
     title: 'Apps',
     sortOrder: '',
@@ -86,7 +89,7 @@ function createProps(graphClient: MSGraphClientV3): IMyEnterpriseAppsProps {
     bodyBackground: '#ffffff',
     themePrimaryTextColor: '#ffffff',
     hasTeamsContext: false,
-    graphClient
+    getGraphClient
   };
 }
 
@@ -175,6 +178,12 @@ async function renderComponent(props: IMyEnterpriseAppsProps, container: HTMLEle
   });
 }
 
+async function flushMicrotasks(): Promise<void> {
+  for (let index = 0; index < 10; index++) {
+    await Promise.resolve();
+  }
+}
+
 describe('MyEnterpriseApps cache integration', () => {
   let container: HTMLDivElement;
 
@@ -194,32 +203,138 @@ describe('MyEnterpriseApps cache integration', () => {
     const cache = new EnterpriseAppsCache();
     cache.write(cacheConfiguration, [cachedApp]);
     const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+    const getGraphClient = jest.fn().mockResolvedValue(graphClient);
 
-    await renderComponent(createProps(graphClient), container);
+    await renderComponent(createProps(graphClient, getGraphClient), container);
 
+    expect(getGraphClient).not.toHaveBeenCalled();
     expect(graphClient.api).not.toHaveBeenCalled();
     expect(container.textContent).toContain('Cached app');
 
     const graphCallsBeforeSortChange = (graphClient.api as jest.Mock).mock.calls.length;
     await act(async () => {
       ReactDOM.render(
-        React.createElement(MyEnterpriseApps, { ...createProps(graphClient), sortOrder: 'Cached' }),
+        React.createElement(MyEnterpriseApps, { ...createProps(graphClient, getGraphClient), sortOrder: 'Cached' }),
         container
       );
       await new Promise<void>(resolve => window.setTimeout(resolve, 0));
     });
+    expect(getGraphClient).not.toHaveBeenCalled();
     expect((graphClient.api as jest.Mock).mock.calls.length).toBe(graphCallsBeforeSortChange);
   });
 
-  it('writes only the complete result after a Graph load', async () => {
+  it('initializes Graph lazily on a cache miss and writes only the complete result', async () => {
     const graphClient = createGraphClient();
+    const getGraphClient = jest.fn().mockResolvedValue(graphClient.client);
 
-    await renderComponent(createProps(graphClient.client), container);
+    await renderComponent(createProps(graphClient.client, getGraphClient), container);
 
+    expect(getGraphClient).toHaveBeenCalledTimes(1);
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
     expect(graphClient.api).toHaveBeenCalledWith('/servicePrincipals');
     expect(container.textContent).toContain('Contoso');
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toHaveLength(1);
+  });
+
+  it('initializes Graph lazily when the cache entry has expired', async () => {
+    const cache = new EnterpriseAppsCache();
+    cache.write(cacheConfiguration, [cachedApp], Date.now() - (31 * 60 * 1000));
+    const graphClient = createGraphClient();
+    const getGraphClient = jest.fn().mockResolvedValue(graphClient.client);
+
+    await renderComponent(createProps(graphClient.client, getGraphClient), container);
+
+    expect(getGraphClient).toHaveBeenCalledTimes(1);
+    expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
+    expect(container.textContent).toContain('Contoso');
+    expect(container.textContent).not.toContain('Cached app');
+    expect(cache.read(cacheConfiguration, 30)).toHaveLength(1);
+  });
+
+  it('waits for Graph initialization after an expired cache entry before calling api', async () => {
+    const cache = new EnterpriseAppsCache();
+    cache.write(cacheConfiguration, [cachedApp], Date.now() - (31 * 60 * 1000));
+    const graphClient = createGraphClient();
+    let resolveGraphClient!: (client: MSGraphClientV3) => void;
+    const graphClientPromise = new Promise<MSGraphClientV3>(resolve => {
+      resolveGraphClient = resolve;
+    });
+    const getGraphClient = jest.fn(() => graphClientPromise);
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    act(() => {
+      ReactDOM.render(
+        React.createElement(MyEnterpriseApps, createProps(graphClient.client, getGraphClient)),
+        container
+      );
+    });
+
+    expect(getGraphClient).toHaveBeenCalledTimes(1);
+    expect(graphClient.api).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('[class*="skeleton"]')).not.toHaveLength(0);
+
+    await act(async () => {
+      resolveGraphClient(graphClient.client);
+      await flushMicrotasks();
+    });
+
+    expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
+    expect(container.textContent).toContain('Contoso');
+    expect(container.querySelectorAll('[class*="skeleton"]')).toHaveLength(0);
+    expect(cache.read(cacheConfiguration, 30)).toHaveLength(1);
+  });
+
+  it('does not start Graph calls for a load that becomes stale while awaiting the client', async () => {
+    const staleGraphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+    const currentGraphClient = createGraphClient();
+    let resolveStaleGraphClient!: (client: MSGraphClientV3) => void;
+    const staleGraphClientPromise = new Promise<MSGraphClientV3>(resolve => {
+      resolveStaleGraphClient = resolve;
+    });
+    const getGraphClient = jest.fn()
+      .mockImplementationOnce(() => staleGraphClientPromise)
+      .mockResolvedValue(currentGraphClient.client);
+
+    act(() => {
+      ReactDOM.render(
+        React.createElement(MyEnterpriseApps, createProps(staleGraphClient, getGraphClient)),
+        container
+      );
+    });
+
+    await act(async () => {
+      ReactDOM.render(
+        React.createElement(MyEnterpriseApps, {
+          ...createProps(currentGraphClient.client, getGraphClient),
+          showOnlyAssignedApps: true
+        }),
+        container
+      );
+      await flushMicrotasks();
+    });
+
+    await act(async () => {
+      resolveStaleGraphClient(staleGraphClient);
+      await flushMicrotasks();
+    });
+
+    expect(getGraphClient).toHaveBeenCalledTimes(2);
+    expect(staleGraphClient.api).not.toHaveBeenCalled();
+    expect(currentGraphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
+  });
+
+  it('routes Graph client initialization failures through the existing load error handling', async () => {
+    const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+    const getGraphClient = jest.fn().mockRejectedValue(new Error('Graph initialization failed'));
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await renderComponent(createProps(graphClient, getGraphClient), container);
+
+    expect(getGraphClient).toHaveBeenCalledTimes(1);
+    expect(graphClient.api).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('Error loading apps: Graph initialization failed');
+    expect(container.querySelectorAll('[class*="skeleton"]')).toHaveLength(0);
   });
 
   it('skips tenant-wide and unassigned-app queries when only assigned apps are shown', async () => {
