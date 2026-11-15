@@ -1,0 +1,16 @@
+{
+  "$schema": "../node_modules/@microsoft/spfx-heft-plugins/lib-commonjs/plugins/copilotAgentPlugin/copilot-agent.schema.json",
+  "agents": [
+    {
+      "name": {
+        "default": "My Enterprise Apps"
+      },
+      "description": {
+        "default": "Find and open your enterprise apps."
+      },
+      "components": [
+        "a8bbeb4c-65b6-4a30-bf49-a7e6e7d36af1"
+      ]
+    }
+  ]
+}

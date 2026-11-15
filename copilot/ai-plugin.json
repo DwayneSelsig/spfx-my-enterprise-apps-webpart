@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "namespace": "enterpriseApps",
+  "name_for_human": "My Enterprise Apps",
+  "description_for_human": "Find and open your enterprise apps.",
+  "description_for_model": "Show enterprise apps, optionally filtered by app name, in the interactive app picker.",
+  "contact_email": "dwayne@dwayneselsig.com"
+}

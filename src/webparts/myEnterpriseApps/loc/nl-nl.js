@@ -1,5 +1,6 @@
 define([], function() {
   return {
+    "CopilotOpenLinkError": "De link kon niet worden geopend. Probeer het opnieuw.",
     "PropertyPaneDescription": "Configureer de instellingen voor de My Enterprise Apps webpart.",
     "BasicGroupName": "Instellingen",
     "DetailViewGroupName": "App-detailweergave",

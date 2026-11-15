@@ -66,8 +66,8 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
       apps: [],
       isLoading: true,
       error: undefined,
-      filterQuery: '',
-      isFilterOpen: false,
+      filterQuery: props.initialSearchQuery || '',
+      isFilterOpen: !!props.initialSearchQuery?.trim(),
       selectedApp: undefined,
       isDetailTransitioning: false,
       isReturningToResults: false,
@@ -88,6 +88,10 @@ export default class MyEnterpriseApps extends React.Component<IMyEnterpriseAppsP
   }
 
   public componentDidUpdate(prevProps: IMyEnterpriseAppsProps): void {
+    if (prevProps.initialSearchQuery !== this.props.initialSearchQuery) {
+      this.onFilterChange(undefined, this.props.initialSearchQuery || '');
+      this.setState({ isFilterOpen: !!this.props.initialSearchQuery?.trim() });
+    }
     if (prevProps.enableDetailView && !this.props.enableDetailView && this.state.selectedApp) {
       this.cancelDetailTransition();
       this.setState({

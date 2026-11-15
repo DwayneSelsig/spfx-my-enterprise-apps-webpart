@@ -29,11 +29,14 @@ jest.mock('MyEnterpriseAppsWebPartStrings', () => ({
 
 import * as React from 'react';
 import { act } from 'react';
+import { initializeIcons } from '@fluentui/react/lib/Icons';
 import { createRoot, type Root } from 'react-dom/client';
 import type { MSGraphClientV3 } from '@microsoft/sp-http';
 import type { IMyEnterpriseAppsProps } from './IMyEnterpriseAppsProps';
 import { EnterpriseAppsCache, type IEnterpriseAppsCacheConfiguration } from './EnterpriseAppsCache';
 import MyEnterpriseApps from './MyEnterpriseApps';
+
+initializeIcons();
 
 interface IBatchRequest {
   id: string;
@@ -197,6 +200,78 @@ describe('MyEnterpriseApps cache integration', () => {
     act(() => root.unmount());
     container.remove();
     jest.restoreAllMocks();
+  });
+
+  it.each(['', 'cached', 'CaChEd', 'missing'])(
+    'applies the host search %s using the existing app-name filter', async query => {
+      new EnterpriseAppsCache().write(cacheConfiguration, [cachedApp, {
+        ...cachedApp, name: 'Other app', resourceId: 'other-resource-id'
+      }]);
+      const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+      await renderComponent({ ...createProps(graphClient), enableDetailView: false, initialSearchQuery: query });
+
+      if (!query) {
+        expect(container.textContent).toContain('Cached app');
+        expect(container.textContent).toContain('Other app');
+      } else if (query === 'missing') {
+        expect(container.textContent).toContain('No apps match your filter');
+      } else {
+        expect(container.textContent).toContain('Cached app');
+        expect(container.textContent).not.toContain('Other app');
+      }
+      expect(graphClient.api).not.toHaveBeenCalled();
+    }
+  );
+
+  it('opens the existing detail view when the initial search matches one loaded app', async () => {
+    new EnterpriseAppsCache().write(cacheConfiguration, [cachedApp]);
+    const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+    await renderComponent({ ...createProps(graphClient), initialSearchQuery: 'cached' });
+    await act(async () => { await new Promise<void>(resolve => window.setTimeout(resolve, 200)); });
+
+    expect(container.textContent).toContain('Back to search results');
+    const openApp = container.querySelector<HTMLAnchorElement>('a[href="https://cached.example"]');
+    expect(openApp?.textContent).toContain('Open app');
+    expect(graphClient.api).not.toHaveBeenCalled();
+  });
+
+  it('keeps a search received before Graph finishes loading and applies the normal detail workflow', async () => {
+    const graphClient = createGraphClient();
+    let finishClient: (client: MSGraphClientV3) => void = () => undefined;
+    const pendingClient = new Promise<MSGraphClientV3>(resolve => { finishClient = resolve; });
+    const getGraphClient = jest.fn().mockReturnValue(pendingClient);
+    const props = { ...createProps(graphClient.client, getGraphClient), initialSearchQuery: 'absent' };
+    await renderComponent(props);
+    await renderComponent({ ...props, initialSearchQuery: 'contoso' });
+    expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('contoso');
+    await act(async () => { finishClient(graphClient.client); await flushMicrotasks(); });
+    await act(async () => { await new Promise<void>(resolve => window.setTimeout(resolve, 200)); });
+
+    expect(container.textContent).toContain('Back to search results');
+    expect(container.textContent).toContain('Contoso');
+    expect(getGraphClient).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts a new host search but preserves manual edits during ordinary rerenders', async () => {
+    new EnterpriseAppsCache().write(cacheConfiguration, [cachedApp]);
+    const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
+    const props = { ...createProps(graphClient), enableDetailView: false, initialSearchQuery: 'cached' };
+    await renderComponent(props);
+    const input = container.querySelector<HTMLInputElement>('input')!;
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, 'manual');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(input.value).toBe('manual');
+    await renderComponent({ ...props, bodyBackground: '#111111' });
+    expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('manual');
+    await renderComponent({ ...props, initialSearchQuery: 'next' });
+    expect(container.querySelector<HTMLInputElement>('input')?.value).toBe('next');
+    await renderComponent({ ...props, initialSearchQuery: '' });
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('Cached app');
+    expect(graphClient.api).not.toHaveBeenCalled();
   });
 
   it('skips Graph when a valid cache entry exists', async () => {

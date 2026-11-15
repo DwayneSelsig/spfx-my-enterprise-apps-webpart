@@ -16,6 +16,7 @@ https://github.com/user-attachments/assets/6cd1f83f-80c3-4986-b193-1923b633b056
 
 The Entra Enterprise Apps webpart provides the following functionality:
 
+- Find apps in Microsoft 365 Copilot using the existing interactive app picker, search, app details, and app links
 - Integration with Microsoft Graph API to retrieve enterprise applications
 - Optional browser caching with configurable duration (10 minutes to 10 hours)
 - Configurable icon sizes (small, normal, large, huge)
@@ -44,7 +45,7 @@ The browser cache is isolated by Microsoft Entra tenant and signed-in user. It i
 [Download the latest release](https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/releases) or compile the solution (`npm run build`). The `.sppkg` file will be in `sharepoint/solution/`.
 
 ### Installation
-Go to the [SharePoint admin center → **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) → **Apps** → **Open** → **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
+Go to the [SharePoint admin center â†’ **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) â†’ **Apps** â†’ **Open** â†’ **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
 
 ### Upgrades
 Upload the new `.sppkg` file and overwrite the existing one when prompted.
@@ -53,6 +54,35 @@ Upload the new `.sppkg` file and overwrite the existing one when prompted.
 
 For more information, see the SharePoint App Catalog documentation:
 https://learn.microsoft.com/sharepoint/use-app-catalog
+
+## Microsoft 365 Copilot
+
+The Copilot UX component reuses the webpart's existing app picker and Graph access. Ask **Show my apps** or **Find Salesforce**. Copilot passes an optional app-name search (`query`) to the component; users can refine or clear the filter, view details, and choose an app link. Links open through the Copilot host after a user click. Result lists are not sent back as model context, and the agent does not open apps automatically.
+
+The Copilot view uses the webpart defaults: assigned apps only, standard apps included, hidden apps excluded, normal sizing, app details enabled, internal notes hidden, and a 30-minute browser cache. It does not read configuration from an installed webpart on a SharePoint page. Cache entries remain isolated by tenant and user; caching is bypassed if the Copilot host cannot supply reliable identity. Search matches app names, not descriptions or business capabilities.
+
+### Local validation
+
+A Microsoft 365 Copilot add-on license is required, including for Copilot Workbench. Use a supported desktop/browser client.
+
+```powershell
+. ./SPFX_SERVE_TENANT_DOMAIN.ps1
+npm run start:copilot
+```
+
+Open `https://<tenant-domain>/_layouts/15/copilotworkbench.aspx` with the local manifest query string printed by the server. Select **My Enterprise Apps**, then test no query, a partial app name, one match, multiple matches, and no matches. Also test manual search/clear, app details, links, and light/dark themes. The existing `npm start` still targets SharePoint Workbench. TypeScript watch mode excludes the generated `temp/copilot` and `teams` package folders so agent packaging does not trigger a rebuild loop; source changes remain watched.
+
+### Build and deployment
+
+Run `npm run build`. The build produces the `.sppkg` in `sharepoint/solution/` and the authored combined Teams/Copilot app package in `teams/` (a ZIP containing the agent, personal tab, and configurable tab). The existing webpart and solution IDs are preserved; the Copilot component and combined app have their own stable IDs.
+
+Upload and enable the `.sppkg` in the tenant SharePoint App Catalog and retain the existing `User.Read` and `Application.Read.All` approvals. No additional Graph permissions are requested. For this combined SPFx Teams/Copilot solution, upload the generated combined ZIP manually through your organization's Teams/Microsoft 365 app-management process; do not rely on automatic **Sync to Teams** for both capabilities. Validate agent availability and **Show my apps** / **Find Salesforce** in the deployed agent: Workbench checks rendering and parameters, not agent discovery or intent matching.
+
+See Microsoft's [Copilot UX overview](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/copilot/overview-copilot-apps) and [Teams deployment guidance](https://learn.microsoft.com/en-us/sharepoint/dev/spfx/deployment-spfx-teams-solutions).
+
+## Privacy
+
+The component reads app information using the signed-in user's existing delegated Microsoft Graph access. Optional browser caching stores app data locally, scoped to the tenant and user. The Copilot action receives the user's requested app-name filter; this implementation does not send the rendered app catalog or app details back to Copilot as model context. Opening an app follows its own destination and sign-in process.
 
 ## Contributing
 
@@ -101,7 +131,7 @@ Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com) as a 
    - Set **Enabled for users to sign in?** to **Yes**.
    - Set **Visible to users?** to **Yes**.
    - Upload a logo. Use a PNG of exactly **215 x 215 pixels**, no larger than **100 KB**. This is the icon shown by Entra and used by the webpart when available.
-4. Go to **Users and groups** > **Add user/group**, select an existing user or—preferably—an existing security group, select the appropriate role (or **Default Access**) and choose **Assign**.
+4. Go to **Users and groups** > **Add user/group**, select an existing user orâ€”preferablyâ€”an existing security group, select the appropriate role (or **Default Access**) and choose **Assign**.
 5. Next, go to **Entra ID** > **App registrations** > **All applications** and open the app registration that has the same **Application (client) ID** as the enterprise application. Then:
    - Under **Branding & properties**, enter the **Home page URL**.
    - Under **Authentication**, choose the appropriate platform (for example, **Web**) and add the required **Redirect URI**.

@@ -1,4 +1,5 @@
 declare interface IMyEnterpriseAppsWebPartStrings {
+  CopilotOpenLinkError: string;
   PropertyPaneDescription: string;
   BasicGroupName: string;
   DetailViewGroupName: string;

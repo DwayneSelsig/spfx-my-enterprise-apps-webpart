@@ -37,3 +37,9 @@ obj
 
 # Styles Generated Code
 *.scss.ts
+
+# Copilot packaging version/hash cache
+teams/.copilot-agent-hotfix.json
+
+# Generated Teams/Copilot app packages
+teams/*.zip

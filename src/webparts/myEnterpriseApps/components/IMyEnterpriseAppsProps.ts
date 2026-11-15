@@ -4,6 +4,8 @@ import { MSGraphClientV3 } from '@microsoft/sp-http';
  * Props for the MyEnterpriseApps React component
  */
 export interface IMyEnterpriseAppsProps {
+  /** Initial search supplied by a host; subsequent manual edits remain local. */
+  initialSearchQuery?: string;
   title: string;
   sortOrder: string;
   showHiddenApps: boolean;

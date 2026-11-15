@@ -9,6 +9,14 @@
           "manifest": "./src/webparts/myEnterpriseApps/MyEnterpriseAppsWebPart.manifest.json"
         }
       ]
+    },
+    "enterprise-apps-copilot-component": {
+      "components": [
+        {
+          "entrypoint": "./lib/copilotComponents/enterpriseApps/EnterpriseAppsCopilotComponent.js",
+          "manifest": "./src/copilotComponents/enterpriseApps/EnterpriseAppsCopilotComponent.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},

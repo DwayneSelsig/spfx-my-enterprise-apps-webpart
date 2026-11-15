@@ -1,0 +1,23 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/declarative-agent/v1.8/schema.json",
+  "version": "v1.8",
+  "name": "My Enterprise Apps",
+  "description": "Find your enterprise apps and open them from an interactive app picker.",
+  "instructions": "$[file('instruction.txt')]",
+  "conversation_starters": [
+    {
+      "title": "Show my apps",
+      "text": "Show my apps"
+    },
+    {
+      "title": "Find an app",
+      "text": "Find Salesforce"
+    }
+  ],
+  "actions": [
+    {
+      "id": "enterpriseAppsAction",
+      "file": "ai-plugin.json"
+    }
+  ]
+}

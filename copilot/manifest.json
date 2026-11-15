@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.29",
+  "version": "1.0.0",
+  "id": "5f0d1760-0af8-4904-ae5c-25da3de62f81",
+  "developer": {
+    "name": "Dwayne Selsig",
+    "websiteUrl": "https://www.dwayneselsig.com",
+    "privacyUrl": "https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart#privacy",
+    "termsOfUseUrl": "https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/blob/main/LICENSE.txt"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "My Enterprise Apps",
+    "full": "My Enterprise Apps"
+  },
+  "description": {
+    "short": "Find and open your enterprise apps.",
+    "full": "Find your enterprise apps in Copilot using the existing interactive app picker, or use the app in Microsoft Teams."
+  },
+  "accentColor": "#FFFFFF",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "enterpriseAppsAgent",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "staticTabs": [
+    {
+      "entityId": "24d140df-f68c-4c16-aec8-e14dfa955670",
+      "name": "My Enterprise Apps",
+      "contentUrl": "https://{teamSiteDomain}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest=/_layouts/15/teamshostedapp.aspx%3Fteams%26personal%26componentId=24d140df-f68c-4c16-aec8-e14dfa955670%26forceLocale={locale}",
+      "scopes": [
+        "personal"
+      ]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "https://{teamSiteDomain}{teamSitePath}/_layouts/15/TeamsLogon.aspx?SPFX=true&dest={teamSitePath}/_layouts/15/teamshostedapp.aspx%3FopenPropertyPane=true%26teams%26componentId=24d140df-f68c-4c16-aec8-e14dfa955670%26forceLocale={locale}",
+      "canUpdateConfiguration": true,
+      "scopes": [
+        "team",
+        "groupChat"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "*.sharepoint.com",
+    "*.login.microsoftonline.com"
+  ],
+  "webApplicationInfo": {
+    "id": "00000003-0000-0ff1-ce00-000000000000",
+    "resource": "https://{teamSiteDomain}"
+  }
+}

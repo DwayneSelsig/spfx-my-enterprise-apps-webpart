@@ -1,0 +1,25 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-component-manifest.schema.json",
+  "id": "a8bbeb4c-65b6-4a30-bf49-a7e6e7d36af1",
+  "alias": "EnterpriseAppsCopilotComponent",
+  "componentType": "CopilotComponent",
+  "copilotType": "Ux",
+  "version": "*",
+  "manifestVersion": 2,
+  "capabilities": {
+    "availableDisplayModes": [
+      "inline"
+    ]
+  },
+  "tools": [
+    {
+      "name": "showEnterpriseApps",
+      "description": {
+        "default": "Show the signed-in user's enterprise apps. Optionally filter by an app name using query. The user can refine the search, view app details, and open an app."
+      },
+      "propertiesSchema": {
+        "id": "$../../../lib/copilotComponents/enterpriseApps/EnterpriseAppsCopilotComponentProperties.js:default;"
+      }
+    }
+  ]
+}
