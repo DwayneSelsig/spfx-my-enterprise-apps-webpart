@@ -45,7 +45,7 @@ The browser cache is isolated by Microsoft Entra tenant and signed-in user. It i
 [Download the latest release](https://github.com/DwayneSelsig/spfx-my-enterprise-apps-webpart/releases) or compile the solution (`npm run build`). The `.sppkg` file will be in `sharepoint/solution/`.
 
 ### Installation
-Go to the [SharePoint admin center â†’ **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) â†’ **Apps** â†’ **Open** â†’ **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
+Go to the [SharePoint admin center > **More features**](https://go.microsoft.com/fwlink/?linkid=2185077) > **Apps** > **Open** > **Upload** the `.sppkg` file. Approve Microsoft Graph permissions (`User.Read` and `Application.Read.All`) when prompted.
 
 ### Upgrades
 Upload the new `.sppkg` file and overwrite the existing one when prompted.
@@ -73,6 +73,8 @@ npm run start:copilot
 Open `https://<tenant-domain>/_layouts/15/copilotworkbench.aspx` with the local manifest query string printed by the server. Select **My Enterprise Apps**, then test no query, a partial app name, one match, multiple matches, and no matches. Also test manual search/clear, app details, links, and light/dark themes. The existing `npm start` still targets SharePoint Workbench. TypeScript watch mode excludes the generated `temp/copilot` and `teams` package folders so agent packaging does not trigger a rebuild loop; source changes remain watched.
 
 ### Build and deployment
+
+GitHub release tags determine the published versions. For example, `v0.9.0` produces npm/component and Teams/Copilot app version `0.9.0`, and SharePoint solution version `0.9.0.0`. The workflow replaces the source placeholders during its build only; source versions remain unchanged. No major-version offset or automatic release-number bump is applied. Release packaging fails if the built Teams app version differs from the tag. Local builds do not establish successful tenant publication.
 
 Run `npm run build`. The build produces the `.sppkg` in `sharepoint/solution/`. It generates the combined Teams/Copilot app package (agent, personal tab, and configurable tab), prepares it as `teams/TeamsSPFxApp.zip`, and includes it in the `.sppkg`. The existing webpart and solution IDs are preserved; the Copilot component and combined app have their own stable IDs.
 

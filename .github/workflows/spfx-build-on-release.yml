@@ -53,11 +53,20 @@ jobs:
         run: |
           jq ".solution.version = \"${{ steps.version.outputs.sharepoint_version }}\"" config/package-solution.json > config/package-solution.json.tmp && mv config/package-solution.json.tmp config/package-solution.json
 
+      # The Copilot/Teams app follows the exact same release tag as package.json.
+      - name: Update Copilot app version
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          jq --arg version "$RELEASE_VERSION" '.version = $version' copilot/manifest.json > copilot/manifest.json.tmp && mv copilot/manifest.json.tmp copilot/manifest.json
+
       - name: Generate default app icons
         run: npm run generate:default-apps
 
       # BUILD (build step includes bundling the solution using the SPFx Heft toolchain, which prepares the package for deployment to SharePoint.)
       - name: Build and package solution (production)
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: npm run build
 
       - name: Upload sppkg to GitHub Release
