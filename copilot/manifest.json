@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
   "manifestVersion": "1.29",
   "version": "1.0.0",
-  "id": "5f0d1760-0af8-4904-ae5c-25da3de62f81",
+  "id": "24d140df-f68c-4c16-aec8-e14dfa955670",
   "developer": {
     "name": "Dwayne Selsig",
     "websiteUrl": "https://www.dwayneselsig.com",
