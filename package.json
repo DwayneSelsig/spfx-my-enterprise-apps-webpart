@@ -13,11 +13,12 @@
   "scripts": {
     "generate:default-apps": "python tools/default-app-icons/replace_images.py",
     "test:default-apps": "python -m unittest tools/default-app-icons/test_replace_images.py",
-    "build": "heft test --clean --production && heft package-solution --production",
+    "build": "heft test --clean --production && npm run package:teams && heft package-solution --production",
     "start": "heft start --clean",
     "clean": "heft clean",
     "eject-webpack": "heft eject-webpack",
-    "start:copilot": "heft start --nobrowser"
+    "start:copilot": "heft start --nobrowser",
+    "package:teams": "node tools/prepare-teams-package.cjs"
   },
   "dependencies": {
     "@fluentui/react": "^8.125.7",
