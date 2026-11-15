@@ -6,4 +6,7 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended
 });
 
-module.exports = compat.config(require('./.eslintrc.legacy.cjs'));
+module.exports = [
+  { ignores: ['**/*.js', '**/*.cjs', 'lib/**', 'lib-commonjs/**', 'dist/**', 'temp/**', 'sharepoint/**', 'release/**'] },
+  ...compat.config(require('./.eslintrc.legacy.cjs'))
+];

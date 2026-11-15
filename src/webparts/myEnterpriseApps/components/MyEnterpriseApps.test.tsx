@@ -1,6 +1,3 @@
-/* The shared container is unmounted in afterEach after each helper render. */
-/* eslint-disable @rushstack/pair-react-dom-render-unmount */
-
 jest.mock('MyEnterpriseAppsWebPartStrings', () => ({
   DefaultTitle: 'My Apps',
   AllAppsLabel: 'Open My Apps',
@@ -31,8 +28,8 @@ jest.mock('MyEnterpriseAppsWebPartStrings', () => ({
 }), { virtual: true });
 
 import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import { act } from 'react-dom/test-utils';
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import type { MSGraphClientV3 } from '@microsoft/sp-http';
 import type { IMyEnterpriseAppsProps } from './IMyEnterpriseAppsProps';
 import { EnterpriseAppsCache, type IEnterpriseAppsCacheConfiguration } from './EnterpriseAppsCache';
@@ -171,9 +168,11 @@ function createBatchGraphClient(
   return { client: { api } as unknown as MSGraphClientV3, batchPosts };
 }
 
-async function renderComponent(props: IMyEnterpriseAppsProps, container: HTMLElement): Promise<void> {
+let root: Root;
+
+async function renderComponent(props: IMyEnterpriseAppsProps): Promise<void> {
   await act(async () => {
-    ReactDOM.render(React.createElement(MyEnterpriseApps, props), container);
+    root.render(React.createElement(MyEnterpriseApps, props));
     await new Promise<void>(resolve => window.setTimeout(resolve, 0));
   });
 }
@@ -191,10 +190,11 @@ describe('MyEnterpriseApps cache integration', () => {
     window.localStorage.clear();
     container = document.createElement('div');
     document.body.appendChild(container);
+    root = createRoot(container);
   });
 
   afterEach(() => {
-    ReactDOM.unmountComponentAtNode(container);
+    act(() => root.unmount());
     container.remove();
     jest.restoreAllMocks();
   });
@@ -205,7 +205,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const graphClient = { api: jest.fn() } as unknown as MSGraphClientV3;
     const getGraphClient = jest.fn().mockResolvedValue(graphClient);
 
-    await renderComponent(createProps(graphClient, getGraphClient), container);
+    await renderComponent(createProps(graphClient, getGraphClient));
 
     expect(getGraphClient).not.toHaveBeenCalled();
     expect(graphClient.api).not.toHaveBeenCalled();
@@ -213,10 +213,8 @@ describe('MyEnterpriseApps cache integration', () => {
 
     const graphCallsBeforeSortChange = (graphClient.api as jest.Mock).mock.calls.length;
     await act(async () => {
-      ReactDOM.render(
-        React.createElement(MyEnterpriseApps, { ...createProps(graphClient, getGraphClient), sortOrder: 'Cached' }),
-        container
-      );
+      root.render(
+        React.createElement(MyEnterpriseApps, { ...createProps(graphClient, getGraphClient), sortOrder: 'Cached' }));
       await new Promise<void>(resolve => window.setTimeout(resolve, 0));
     });
     expect(getGraphClient).not.toHaveBeenCalled();
@@ -227,7 +225,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const graphClient = createGraphClient();
     const getGraphClient = jest.fn().mockResolvedValue(graphClient.client);
 
-    await renderComponent(createProps(graphClient.client, getGraphClient), container);
+    await renderComponent(createProps(graphClient.client, getGraphClient));
 
     expect(getGraphClient).toHaveBeenCalledTimes(1);
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
@@ -242,7 +240,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const graphClient = createGraphClient();
     const getGraphClient = jest.fn().mockResolvedValue(graphClient.client);
 
-    await renderComponent(createProps(graphClient.client, getGraphClient), container);
+    await renderComponent(createProps(graphClient.client, getGraphClient));
 
     expect(getGraphClient).toHaveBeenCalledTimes(1);
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
@@ -263,10 +261,8 @@ describe('MyEnterpriseApps cache integration', () => {
     const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
     act(() => {
-      ReactDOM.render(
-        React.createElement(MyEnterpriseApps, createProps(graphClient.client, getGraphClient)),
-        container
-      );
+      root.render(
+        React.createElement(MyEnterpriseApps, createProps(graphClient.client, getGraphClient)));
     });
 
     expect(getGraphClient).toHaveBeenCalledTimes(1);
@@ -297,20 +293,16 @@ describe('MyEnterpriseApps cache integration', () => {
       .mockResolvedValue(currentGraphClient.client);
 
     act(() => {
-      ReactDOM.render(
-        React.createElement(MyEnterpriseApps, createProps(staleGraphClient, getGraphClient)),
-        container
-      );
+      root.render(
+        React.createElement(MyEnterpriseApps, createProps(staleGraphClient, getGraphClient)));
     });
 
     await act(async () => {
-      ReactDOM.render(
+      root.render(
         React.createElement(MyEnterpriseApps, {
           ...createProps(currentGraphClient.client, getGraphClient),
           showOnlyAssignedApps: true
-        }),
-        container
-      );
+        }));
       await flushMicrotasks();
     });
 
@@ -329,7 +321,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const getGraphClient = jest.fn().mockRejectedValue(new Error('Graph initialization failed'));
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    await renderComponent(createProps(graphClient, getGraphClient), container);
+    await renderComponent(createProps(graphClient, getGraphClient));
 
     expect(getGraphClient).toHaveBeenCalledTimes(1);
     expect(graphClient.api).not.toHaveBeenCalled();
@@ -341,7 +333,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const graphClient = createGraphClient();
     const assignedOnlyConfiguration = { ...cacheConfiguration, showOnlyAssignedApps: true };
 
-    await renderComponent({ ...createProps(graphClient.client), showOnlyAssignedApps: true }, container);
+    await renderComponent({ ...createProps(graphClient.client), showOnlyAssignedApps: true });
 
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
     expect(graphClient.api).not.toHaveBeenCalledWith('/servicePrincipals');
@@ -355,17 +347,15 @@ describe('MyEnterpriseApps cache integration', () => {
     cache.write(cacheConfiguration, [cachedApp]);
     const graphClient = createGraphClient();
 
-    await renderComponent({ ...createProps(graphClient.client), isPropertyPaneOpen: true }, container);
+    await renderComponent({ ...createProps(graphClient.client), isPropertyPaneOpen: true });
 
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toEqual([cachedApp]);
     const graphCallsWhileEditing = graphClient.api.mock.calls.length;
 
     await act(async () => {
-      ReactDOM.render(
-        React.createElement(MyEnterpriseApps, { ...createProps(graphClient.client), isPropertyPaneOpen: false }),
-        container
-      );
+      root.render(
+        React.createElement(MyEnterpriseApps, { ...createProps(graphClient.client), isPropertyPaneOpen: false }));
       await new Promise<void>(resolve => window.setTimeout(resolve, 0));
     });
 
@@ -378,7 +368,7 @@ describe('MyEnterpriseApps cache integration', () => {
     cache.write(cacheConfiguration, [cachedApp]);
     const graphClient = createGraphClient();
 
-    await renderComponent({ ...createProps(graphClient.client), enableCache: false }, container);
+    await renderComponent({ ...createProps(graphClient.client), enableCache: false });
 
     expect(graphClient.api).toHaveBeenCalledWith('/me/appRoleAssignments');
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toBeUndefined();
@@ -388,7 +378,7 @@ describe('MyEnterpriseApps cache integration', () => {
     const graphClient = createBatchGraphClient(1, true);
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
-    await renderComponent(createProps(graphClient.client), container);
+    await renderComponent(createProps(graphClient.client));
 
     expect(new EnterpriseAppsCache().read(cacheConfiguration, 30)).toEqual([]);
     expect(warn.mock.calls.some(([message]) =>
@@ -399,7 +389,7 @@ describe('MyEnterpriseApps cache integration', () => {
   it.each([20, 21])('keeps Graph batches at a maximum of 20 requests for %i apps', async (appCount: number) => {
     const graphClient = createBatchGraphClient(appCount);
 
-    await renderComponent({ ...createProps(graphClient.client), enableCache: false }, container);
+    await renderComponent({ ...createProps(graphClient.client), enableCache: false });
 
     expect(graphClient.batchPosts).toHaveLength(appCount === 20 ? 1 : 2);
     expect((graphClient.batchPosts[0].mock.calls[0][0] as { requests: IBatchRequest[] }).requests).toHaveLength(20);

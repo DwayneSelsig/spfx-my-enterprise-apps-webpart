@@ -1,5 +1,5 @@
 import * as React from 'react';
-import * as ReactDom from 'react-dom';
+import { createRoot, type Root } from 'react-dom/client';
 import { DisplayMode, Version } from '@microsoft/sp-core-library';
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
 import {
@@ -51,6 +51,7 @@ export interface IMyEnterpriseAppsWebPartProps {
 }
 
 export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEnterpriseAppsWebPartProps> {
+  private root: Root | undefined;
   private graphClientPromise: Promise<MSGraphClientV3> | undefined;
   private isPropertyPaneOpen = false;
   private readonly themeColors = new SharePointThemeColors();
@@ -269,7 +270,8 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
       }
     );
 
-    ReactDom.render(element, this.domElement);
+    this.root = this.root ?? createRoot(this.domElement);
+    this.root.render(element);
   }
 
   protected async onInit(): Promise<void> {
@@ -282,7 +284,8 @@ export default class MyEnterpriseAppsWebPart extends BaseClientSideWebPart<IMyEn
   }
 
   protected onDispose(): void {
-    ReactDom.unmountComponentAtNode(this.domElement);
+    this.root?.unmount();
+    this.root = undefined;
   }
 
   protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
